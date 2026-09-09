@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticarMotorista } = require('../middleware/auth');
-const { validarCPF, limparNumeros } = require('../utils/validators');
+const { validarCPF, limparNumeros, validarPlaca, normalizarPlaca } = require('../utils/validators');
 
 const router = express.Router();
 
@@ -73,13 +73,23 @@ router.get('/veiculos', async (req, res) => {
   res.json(veiculos);
 });
 
-router.post('/iniciar', async (req, res) => {
-  const parsed = z.object({ veiculoId: z.string().uuid() }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ erro: 'Selecione o veiculo.' });
+const iniciarSchema = z
+  .object({
+    veiculoId: z.string().uuid().optional(),
+    placa: z.string().optional(),
+    modelo: z.string().optional(),
+    origem: z.string().min(1, 'Informe a origem.'),
+    destino: z.string().min(1, 'Informe o destino.'),
+  })
+  .refine((dados) => dados.veiculoId || dados.placa, {
+    message: 'Selecione um veiculo cadastrado ou digite a placa.',
+  });
 
-  const veiculo = await prisma.veiculo.findUnique({ where: { id: parsed.data.veiculoId } });
-  if (!veiculo || veiculo.status !== 'ATIVO') {
-    return res.status(404).json({ erro: 'Veiculo nao encontrado ou indisponivel.' });
+router.post('/iniciar', async (req, res) => {
+  const parsed = iniciarSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const primeiraMensagem = parsed.error.errors[0]?.message || 'Dados invalidos.';
+    return res.status(400).json({ erro: primeiraMensagem });
   }
 
   const rotaAberta = await prisma.rota.findFirst({
@@ -89,14 +99,40 @@ router.post('/iniciar', async (req, res) => {
     return res.status(409).json({ erro: 'Ja existe uma rota em andamento.' });
   }
 
+  let veiculo;
+
+  if (parsed.data.veiculoId) {
+    veiculo = await prisma.veiculo.findUnique({ where: { id: parsed.data.veiculoId } });
+    if (!veiculo || veiculo.status !== 'ATIVO') {
+      return res.status(404).json({ erro: 'Veiculo nao encontrado ou indisponivel.' });
+    }
+  } else {
+    if (!validarPlaca(parsed.data.placa)) {
+      return res.status(400).json({ erro: 'Placa invalida. Use o formato ABC1234 ou ABC1D23.' });
+    }
+    const placa = normalizarPlaca(parsed.data.placa);
+    veiculo = await prisma.veiculo.findUnique({ where: { placa } });
+
+    if (veiculo && veiculo.status !== 'ATIVO') {
+      return res.status(409).json({ erro: `Este veiculo esta com status "${veiculo.status}". Fale com o administrador.` });
+    }
+
+    if (!veiculo) {
+      // Veiculo ainda nao cadastrado: cria automaticamente a partir do que o motorista informou
+      veiculo = await prisma.veiculo.create({
+        data: { placa, modelo: parsed.data.modelo?.trim() || 'Nao informado', status: 'ATIVO' },
+      });
+    }
+  }
+
   const valorPadrao = Number(process.env.VALOR_ROTA_PADRAO || 0);
 
   const rota = await prisma.rota.create({
     data: {
       motoristaId: req.motorista.id,
       veiculoId: veiculo.id,
-      origem: 'A definir',
-      destino: 'A definir',
+      origem: parsed.data.origem.trim(),
+      destino: parsed.data.destino.trim(),
       dataSaida: new Date(),
       valor: valorPadrao,
       status: 'EM_ANDAMENTO',

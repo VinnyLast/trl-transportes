@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PlayCircle, StopCircle, LogOut, Truck } from 'lucide-react';
+import { PlayCircle, StopCircle, LogOut, Truck, List, Keyboard } from 'lucide-react';
 import motoristaApi, { limparSessaoMotorista } from '../api/motoristaClient';
 import logo from '../assets/logo-trl-trim.png';
 
@@ -9,6 +9,10 @@ function formatarCpfDigitado(valor) {
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function formatarPlacaDigitada(valor) {
+  return valor.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
 }
 
 export default function PainelMotorista() {
@@ -22,6 +26,11 @@ export default function PainelMotorista() {
   const [rotaAtiva, setRotaAtiva] = useState(null);
   const [veiculos, setVeiculos] = useState([]);
   const [veiculoId, setVeiculoId] = useState('');
+  const [modoVeiculo, setModoVeiculo] = useState('lista'); // lista | digitar
+  const [placaDigitada, setPlacaDigitada] = useState('');
+  const [modeloDigitado, setModeloDigitado] = useState('');
+  const [origem, setOrigem] = useState('');
+  const [destino, setDestino] = useState('');
   const [carregandoStatus, setCarregandoStatus] = useState(true);
 
   async function carregarStatus() {
@@ -75,15 +84,27 @@ export default function PainelMotorista() {
     setErro('');
   }
 
-  async function iniciarRota() {
-    if (!veiculoId) {
+  async function iniciarRota(e) {
+    e.preventDefault();
+    setErro('');
+
+    if (modoVeiculo === 'lista' && !veiculoId) {
       setErro('Selecione o veiculo.');
       return;
     }
-    setErro('');
+    if (modoVeiculo === 'digitar' && !placaDigitada) {
+      setErro('Digite a placa do veiculo.');
+      return;
+    }
+
     setCarregando(true);
     try {
-      const res = await motoristaApi.post('/motorista-app/iniciar', { veiculoId });
+      const payload =
+        modoVeiculo === 'lista'
+          ? { veiculoId, origem, destino }
+          : { placa: placaDigitada, modelo: modeloDigitado, origem, destino };
+
+      const res = await motoristaApi.post('/motorista-app/iniciar', payload);
       setRotaAtiva(res.data.rota);
       setMensagem(`Rota iniciada as ${new Date(res.data.rota.dataSaida).toLocaleTimeString('pt-BR')}.`);
     } catch (err) {
@@ -103,6 +124,11 @@ export default function PainelMotorista() {
       const resVeiculos = await motoristaApi.get('/motorista-app/veiculos');
       setVeiculos(resVeiculos.data);
       setVeiculoId('');
+      setPlacaDigitada('');
+      setModeloDigitado('');
+      setOrigem('');
+      setDestino('');
+      setModoVeiculo('lista');
     } catch (err) {
       setErro(err.response?.data?.erro || 'Nao foi possivel finalizar a rota.');
     } finally {
@@ -174,6 +200,7 @@ export default function PainelMotorista() {
             <div className="cartao-rota-ativa">
               <span className="rotulo"><Truck size={16} /> Veiculo em uso</span>
               <span className="valor-destaque">{rotaAtiva.veiculo?.placa}</span>
+              <span className="rotulo">{rotaAtiva.origem} &rarr; {rotaAtiva.destino}</span>
               <span className="rotulo">Saida: {new Date(rotaAtiva.dataSaida).toLocaleString('pt-BR')}</span>
             </div>
 
@@ -183,27 +210,90 @@ export default function PainelMotorista() {
             </button>
           </div>
         ) : (
-          <div>
-            <div className="campo">
-              <label htmlFor="veiculo-motorista">Veiculo</label>
-              <select
-                id="veiculo-motorista"
-                className="input-grande"
-                value={veiculoId}
-                onChange={(e) => setVeiculoId(e.target.value)}
+          <form onSubmit={iniciarRota}>
+            <div className="alternador-login">
+              <button
+                type="button"
+                className={'aba-login' + (modoVeiculo === 'lista' ? ' ativa' : '')}
+                onClick={() => setModoVeiculo('lista')}
               >
-                <option value="">Selecione o veiculo...</option>
-                {veiculos.map((v) => (
-                  <option key={v.id} value={v.id}>{v.placa} - {v.modelo}</option>
-                ))}
-              </select>
+                <List size={14} /> Veiculo cadastrado
+              </button>
+              <button
+                type="button"
+                className={'aba-login' + (modoVeiculo === 'digitar' ? ' ativa' : '')}
+                onClick={() => setModoVeiculo('digitar')}
+              >
+                <Keyboard size={14} /> Digitar placa
+              </button>
             </div>
 
-            <button className="btn btn-primario btn-gigante" onClick={iniciarRota} disabled={carregando}>
+            {modoVeiculo === 'lista' ? (
+              <div className="campo">
+                <label htmlFor="veiculo-motorista">Veiculo</label>
+                <select
+                  id="veiculo-motorista"
+                  className="input-grande"
+                  value={veiculoId}
+                  onChange={(e) => setVeiculoId(e.target.value)}
+                >
+                  <option value="">Selecione o veiculo...</option>
+                  {veiculos.map((v) => (
+                    <option key={v.id} value={v.id}>{v.placa} - {v.modelo}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <div className="campo">
+                  <label htmlFor="placa-motorista">Placa do veiculo</label>
+                  <input
+                    id="placa-motorista"
+                    className="input-grande"
+                    placeholder="ABC1234"
+                    value={placaDigitada}
+                    onChange={(e) => setPlacaDigitada(formatarPlacaDigitada(e.target.value))}
+                  />
+                </div>
+                <div className="campo">
+                  <label htmlFor="modelo-motorista">Modelo do veiculo (opcional)</label>
+                  <input
+                    id="modelo-motorista"
+                    className="input-grande"
+                    placeholder="Ex.: Volvo FH 540"
+                    value={modeloDigitado}
+                    onChange={(e) => setModeloDigitado(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="campo">
+              <label htmlFor="origem-motorista">Origem</label>
+              <input
+                id="origem-motorista"
+                className="input-grande"
+                value={origem}
+                onChange={(e) => setOrigem(e.target.value)}
+                required
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="destino-motorista">Destino</label>
+              <input
+                id="destino-motorista"
+                className="input-grande"
+                value={destino}
+                onChange={(e) => setDestino(e.target.value)}
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primario btn-gigante" disabled={carregando}>
               <PlayCircle size={22} />
               {carregando ? 'Iniciando...' : 'Iniciar rota'}
             </button>
-          </div>
+          </form>
         )}
 
         <button className="btn btn-texto btn-trocar" onClick={sair}>
