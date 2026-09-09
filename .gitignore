@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+npm-debug.log*
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Prisma
+backend/prisma/dev.db
+
+# Docker
+*.pid

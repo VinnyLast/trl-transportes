@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Papel {
+  ADMINISTRADOR
+  OPERADOR
+}
+
+enum StatusMotorista {
+  ATIVO
+  INATIVO
+}
+
+enum StatusVeiculo {
+  ATIVO
+  MANUTENCAO
+  INATIVO
+}
+
+enum StatusRota {
+  AGENDADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  cpf       String?  @unique
+  senhaHash String
+  papel     Papel    @default(OPERADOR)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+model Motorista {
+  id        String          @id @default(uuid())
+  nome      String
+  cpf       String          @unique
+  cnhNumero String
+  cnhCategoria String
+  telefone  String
+  status    StatusMotorista @default(ATIVO)
+  criadoEm  DateTime        @default(now())
+  atualizadoEm DateTime     @updatedAt
+  rotas     Rota[]
+}
+
+model Veiculo {
+  id             String        @id @default(uuid())
+  placa          String        @unique
+  modelo         String
+  capacidadeCarga String?
+  status         StatusVeiculo @default(ATIVO)
+  criadoEm       DateTime      @default(now())
+  atualizadoEm   DateTime      @updatedAt
+  rotas          Rota[]
+}
+
+model Cliente {
+  id        String   @id @default(uuid())
+  nome      String
+  endereco  String
+  contato   String?
+  criadoEm  DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  rotas     Rota[]
+}
+
+model Rota {
+  id             String     @id @default(uuid())
+  motorista      Motorista  @relation(fields: [motoristaId], references: [id])
+  motoristaId    String
+  veiculo        Veiculo    @relation(fields: [veiculoId], references: [id])
+  veiculoId      String
+  cliente        Cliente?   @relation(fields: [clienteId], references: [id])
+  clienteId      String?
+  origem         String
+  destino        String
+  dataSaida      DateTime
+  dataChegada    DateTime?
+  valor          Decimal    @db.Decimal(10, 2)
+  observacoes    String?
+  status         StatusRota @default(AGENDADA)
+  criadoEm       DateTime   @default(now())
+  atualizadoEm   DateTime   @updatedAt
+}
