@@ -49,6 +49,7 @@ model Motorista {
   cnhNumero String
   cnhCategoria String
   telefone  String
+  senhaHash String?
   status    StatusMotorista @default(ATIVO)
   criadoEm  DateTime        @default(now())
   atualizadoEm DateTime     @updatedAt

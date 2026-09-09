@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, Smartphone, ShieldOff } from 'lucide-react';
 import api from '../api/client';
 
-const vazio = { nome: '', cpf: '', cnhNumero: '', cnhCategoria: '', telefone: '', status: 'ATIVO' };
+const vazio = { nome: '', cpf: '', cnhNumero: '', cnhCategoria: '', telefone: '', status: 'ATIVO', senha: '' };
 
 export default function Motoristas() {
   const [lista, setLista] = useState([]);
@@ -10,6 +10,7 @@ export default function Motoristas() {
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(vazio);
   const [editandoId, setEditandoId] = useState(null);
+  const [temSenha, setTemSenha] = useState(false);
   const [erro, setErro] = useState('');
 
   async function carregar() {
@@ -25,6 +26,7 @@ export default function Motoristas() {
   function abrirNovo() {
     setForm(vazio);
     setEditandoId(null);
+    setTemSenha(false);
     setErro('');
     setModalAberto(true);
   }
@@ -37,8 +39,10 @@ export default function Motoristas() {
       cnhCategoria: motorista.cnhCategoria,
       telefone: motorista.telefone,
       status: motorista.status,
+      senha: '',
     });
     setEditandoId(motorista.id);
+    setTemSenha(Boolean(motorista.temSenha));
     setErro('');
     setModalAberto(true);
   }
@@ -103,6 +107,7 @@ export default function Motoristas() {
                   <th>CNH</th>
                   <th>Telefone</th>
                   <th>Status</th>
+                  <th>App do motorista</th>
                   <th></th>
                 </tr>
               </thead>
@@ -117,6 +122,13 @@ export default function Motoristas() {
                       <span className={`badge ${m.status === 'ATIVO' ? 'badge-verde' : 'badge-cinza'}`}>
                         {m.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
                       </span>
+                    </td>
+                    <td>
+                      {m.temSenha ? (
+                        <span className="badge badge-azul"><Smartphone size={12} /> Habilitado</span>
+                      ) : (
+                        <span className="badge badge-cinza"><ShieldOff size={12} /> Sem acesso</span>
+                      )}
                     </td>
                     <td>
                       <div className="acoes-tabela">
@@ -176,6 +188,22 @@ export default function Motoristas() {
                   <option value="INATIVO">Inativo</option>
                 </select>
               </div>
+            </div>
+
+            <div className="campo">
+              <label>
+                Senha de acesso ao aplicativo do motorista
+                {editandoId && (temSenha ? ' (deixe em branco para manter a atual)' : ' (ainda nao definida)')}
+              </label>
+              <input
+                type="password"
+                placeholder="Minimo 4 caracteres"
+                value={form.senha}
+                onChange={(e) => setForm({ ...form, senha: e.target.value })}
+              />
+              <span style={{ fontSize: 12, color: 'var(--cinza-texto)' }}>
+                O motorista usa o CPF e esta senha para entrar no aplicativo (em /motorista) e registrar o inicio e o fim das rotas.
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>

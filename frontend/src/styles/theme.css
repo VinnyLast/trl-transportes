@@ -292,6 +292,25 @@ tr:hover td {
   margin-bottom: 20px;
 }
 
+.grade-graficos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+.grade-graficos .card {
+  min-width: 0;
+}
+
+.titulo-grafico {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cinza-texto-forte);
+}
+
 .cartao-indicador {
   background: var(--branco);
   border-radius: var(--raio);
@@ -416,6 +435,119 @@ tr:hover td {
   background: var(--branco);
   color: var(--azul-primario);
   box-shadow: var(--sombra);
+}
+
+.link-motorista {
+  display: block;
+  text-align: center;
+  margin-top: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza-texto);
+  text-decoration: none;
+}
+
+.link-motorista:hover {
+  color: var(--azul-primario);
+  text-decoration: underline;
+}
+
+/* Tela do motorista: mobile-first, botoes grandes, uso rapido no celular */
+.tela-motorista {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--azul-primario), var(--azul-escuro));
+  padding: 20px;
+}
+
+.caixa-motorista {
+  background: var(--branco);
+  border-radius: 16px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.logo-motorista {
+  width: 160px;
+  max-width: 70%;
+  height: auto;
+  margin-bottom: 12px;
+}
+
+.caixa-motorista h1 {
+  font-size: 20px;
+  margin: 8px 0 4px;
+}
+
+.subtitulo-motorista {
+  color: var(--cinza-texto);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.saudacao-motorista {
+  font-size: 16px;
+  margin: 4px 0 20px;
+}
+
+.input-grande {
+  font-size: 18px !important;
+  padding: 16px !important;
+  text-align: center;
+}
+
+.btn-gigante {
+  width: 100%;
+  justify-content: center;
+  font-size: 18px;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 6px;
+}
+
+.btn-trocar {
+  width: 100%;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.cartao-rota-ativa {
+  background: var(--cinza-fundo);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.cartao-rota-ativa .rotulo {
+  font-size: 13px;
+  color: var(--cinza-texto);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cartao-rota-ativa .valor-destaque {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--azul-primario);
+}
+
+.aviso-sucesso {
+  background: #e2f5ea;
+  color: #1a7f4e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
 }
 
 .vazio {

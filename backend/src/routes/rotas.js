@@ -73,6 +73,82 @@ router.get('/resumo', async (req, res) => {
   res.json({ total, emAndamento, concluidas, agendadas, canceladas, valorTotal });
 });
 
+// Serie mensal de quantidade e valor de rotas, para o grafico do painel
+router.get('/grafico-mensal', async (req, res) => {
+  const meses = Math.min(Number(req.query.meses) || 6, 24);
+  const inicio = new Date();
+  inicio.setDate(1);
+  inicio.setHours(0, 0, 0, 0);
+  inicio.setMonth(inicio.getMonth() - (meses - 1));
+
+  const rotas = await prisma.rota.findMany({
+    where: { dataSaida: { gte: inicio }, status: { not: 'CANCELADA' } },
+    select: { dataSaida: true, valor: true },
+  });
+
+  const baldes = new Map();
+  for (let i = 0; i < meses; i++) {
+    const data = new Date(inicio);
+    data.setMonth(data.getMonth() + i);
+    const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+    baldes.set(chave, {
+      mes: chave,
+      rotulo: data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+      quantidade: 0,
+      valor: 0,
+    });
+  }
+
+  for (const rota of rotas) {
+    const d = new Date(rota.dataSaida);
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const balde = baldes.get(chave);
+    if (balde) {
+      balde.quantidade += 1;
+      balde.valor += Number(rota.valor);
+    }
+  }
+
+  res.json(Array.from(baldes.values()));
+});
+
+// Ranking de motoristas por valor total gerado, para o grafico do painel
+router.get('/grafico-motoristas', async (req, res) => {
+  const limite = Math.min(Number(req.query.limite) || 6, 20);
+  const { dataInicio, dataFim } = req.query;
+
+  const where = { status: { not: 'CANCELADA' } };
+  if (dataInicio || dataFim) {
+    where.dataSaida = {};
+    if (dataInicio) where.dataSaida.gte = new Date(String(dataInicio));
+    if (dataFim) where.dataSaida.lte = new Date(String(dataFim));
+  }
+
+  const rotas = await prisma.rota.findMany({
+    where,
+    select: { valor: true, motorista: { select: { id: true, nome: true } } },
+  });
+
+  const porMotorista = new Map();
+  for (const rota of rotas) {
+    const atual = porMotorista.get(rota.motorista.id) || {
+      motoristaId: rota.motorista.id,
+      nome: rota.motorista.nome,
+      quantidade: 0,
+      valor: 0,
+    };
+    atual.quantidade += 1;
+    atual.valor += Number(rota.valor);
+    porMotorista.set(rota.motorista.id, atual);
+  }
+
+  const ranking = Array.from(porMotorista.values())
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, limite);
+
+  res.json(ranking);
+});
+
 router.get('/:id', async (req, res) => {
   const rota = await prisma.rota.findUnique({ where: { id: req.params.id }, include });
   if (!rota) return res.status(404).json({ erro: 'Rota nao encontrada.' });

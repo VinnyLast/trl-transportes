@@ -106,6 +106,8 @@ export default function Login() {
           <LogIn size={16} />
           {enviando ? 'Entrando...' : 'Entrar'}
         </button>
+
+        <a href="/motorista" className="link-motorista">Sou motorista, registrar rota</a>
       </form>
     </div>
   );
