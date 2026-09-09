@@ -77,11 +77,16 @@ router.post('/', async (req, res) => {
     dados.senhaHash = await bcrypt.hash(senha, 10);
   }
 
-  const motorista = await prisma.motorista.create({
-    data: dados,
-    select: { ...selecionarCampos(), senhaHash: true },
-  });
-  res.status(201).json(comIndicadorSenha(motorista));
+  try {
+    const motorista = await prisma.motorista.create({
+      data: dados,
+      select: { ...selecionarCampos(), senhaHash: true },
+    });
+    res.status(201).json(comIndicadorSenha(motorista));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro interno no servidor.' });
+  }
 });
 
 router.put('/:id', async (req, res) => {
