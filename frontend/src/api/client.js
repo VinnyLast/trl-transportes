@@ -24,4 +24,21 @@ api.interceptors.response.use(
   }
 );
 
+// Monta uma mensagem de erro legivel a partir da resposta da API, incluindo o
+// motivo especifico de cada campo quando o backend retorna erro de validacao (zod)
+export function mensagemErroApi(err, fallback) {
+  const dados = err.response?.data;
+  if (!dados) return fallback;
+
+  const camposComErro = dados.detalhes?.fieldErrors;
+  if (camposComErro) {
+    const mensagens = Object.entries(camposComErro)
+      .filter(([, msgs]) => msgs?.length)
+      .map(([campo, msgs]) => `${campo}: ${msgs[0]}`);
+    if (mensagens.length) return `${dados.erro || fallback} (${mensagens.join('; ')})`;
+  }
+
+  return dados.erro || fallback;
+}
+
 export default api;

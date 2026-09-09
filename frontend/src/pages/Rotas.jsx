@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, CheckCircle2, XCircle, Download } from 'lucide-react';
-import api from '../api/client';
+import api, { mensagemErroApi } from '../api/client';
 
 const vazio = {
   motoristaId: '',
@@ -124,7 +124,7 @@ export default function Rotas() {
       setModalAberto(false);
       carregar();
     } catch (err) {
-      setErro(err.response?.data?.erro || 'Erro ao salvar rota.');
+      setErro(mensagemErroApi(err, 'Erro ao salvar rota.'));
     }
   }
 

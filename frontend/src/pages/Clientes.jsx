@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Power, PowerOff } from 'lucide-react';
-import api from '../api/client';
+import api, { mensagemErroApi } from '../api/client';
 
 const vazio = { nome: '', endereco: '', contato: '', status: 'ATIVO' };
 
@@ -48,7 +48,7 @@ export default function Clientes() {
       setModalAberto(false);
       carregar();
     } catch (err) {
-      setErro(err.response?.data?.erro || 'Erro ao salvar cliente.');
+      setErro(mensagemErroApi(err, 'Erro ao salvar cliente.'));
     }
   }
 

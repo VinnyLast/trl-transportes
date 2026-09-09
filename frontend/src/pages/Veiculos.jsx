@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Power, PowerOff } from 'lucide-react';
-import api from '../api/client';
+import api, { mensagemErroApi } from '../api/client';
 
 const vazio = { placa: '', modelo: '', capacidadeCarga: '', status: 'ATIVO' };
 
@@ -51,7 +51,7 @@ export default function Veiculos() {
       setModalAberto(false);
       carregar();
     } catch (err) {
-      setErro(err.response?.data?.erro || 'Erro ao salvar veiculo.');
+      setErro(mensagemErroApi(err, 'Erro ao salvar veiculo.'));
     }
   }
 
