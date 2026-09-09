@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, Power, PowerOff } from 'lucide-react';
 import api from '../api/client';
 
-const vazio = { nome: '', endereco: '', contato: '' };
+const vazio = { nome: '', endereco: '', contato: '', status: 'ATIVO' };
 
 export default function Clientes() {
   const [lista, setLista] = useState([]);
@@ -30,7 +30,7 @@ export default function Clientes() {
   }
 
   function abrirEdicao(c) {
-    setForm({ nome: c.nome, endereco: c.endereco, contato: c.contato || '' });
+    setForm({ nome: c.nome, endereco: c.endereco, contato: c.contato || '', status: c.status });
     setEditandoId(c.id);
     setErro('');
     setModalAberto(true);
@@ -62,6 +62,16 @@ export default function Clientes() {
     }
   }
 
+  async function alternarStatus(cliente) {
+    const novoStatus = cliente.status === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+    try {
+      await api.put(`/clientes/${cliente.id}`, { status: novoStatus });
+      carregar();
+    } catch (err) {
+      alert(err.response?.data?.erro || 'Erro ao atualizar status do cliente.');
+    }
+  }
+
   return (
     <div>
       <div className="cabecalho-pagina">
@@ -89,6 +99,7 @@ export default function Clientes() {
                   <th>Nome / Razao social</th>
                   <th>Endereco</th>
                   <th>Contato</th>
+                  <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
@@ -99,9 +110,21 @@ export default function Clientes() {
                     <td>{c.endereco}</td>
                     <td>{c.contato || '-'}</td>
                     <td>
+                      <span className={`badge ${c.status === 'ATIVO' ? 'badge-verde' : 'badge-cinza'}`}>
+                        {c.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td>
                       <div className="acoes-tabela">
+                        <button
+                          className="btn btn-texto"
+                          title={c.status === 'ATIVO' ? 'Desativar cliente' : 'Ativar cliente'}
+                          onClick={() => alternarStatus(c)}
+                        >
+                          {c.status === 'ATIVO' ? <PowerOff size={16} color="#d1273d" /> : <Power size={16} color="#1a7f4e" />}
+                        </button>
                         <button className="btn btn-texto" onClick={() => abrirEdicao(c)}><Pencil size={16} /></button>
-                        <button className="btn btn-texto" onClick={() => excluir(c.id)}><Trash2 size={16} color="#d1273d" /></button>
+                        <button className="btn btn-texto" title="Excluir permanentemente" onClick={() => excluir(c.id)}><Trash2 size={16} color="#d1273d" /></button>
                       </div>
                     </td>
                   </tr>
@@ -133,6 +156,13 @@ export default function Clientes() {
             <div className="campo">
               <label>Contato (opcional)</label>
               <input value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} />
+            </div>
+            <div className="campo">
+              <label>Status</label>
+              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <option value="ATIVO">Ativo</option>
+                <option value="INATIVO">Inativo</option>
+              </select>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>

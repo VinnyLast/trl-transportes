@@ -3,6 +3,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticar } = require('../middleware/auth');
 const { validarPlaca, normalizarPlaca } = require('../utils/validators');
+const { tratarErroExclusao } = require('../utils/erros');
 
 const router = express.Router();
 router.use(autenticar);
@@ -61,7 +62,7 @@ router.put('/:id', async (req, res) => {
     const veiculo = await prisma.veiculo.update({ where: { id: req.params.id }, data: dados });
     res.json(veiculo);
   } catch (err) {
-    res.status(404).json({ erro: 'Veiculo nao encontrado.' });
+    tratarErroExclusao(err, res, 'Veiculo');
   }
 });
 
@@ -70,7 +71,7 @@ router.delete('/:id', async (req, res) => {
     await prisma.veiculo.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (err) {
-    res.status(404).json({ erro: 'Veiculo nao encontrado.' });
+    tratarErroExclusao(err, res, 'Veiculo');
   }
 });
 

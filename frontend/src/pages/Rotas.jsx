@@ -56,7 +56,7 @@ export default function Rotas() {
     const [m, v, c] = await Promise.all([
       api.get('/motoristas', { params: { status: 'ATIVO' } }),
       api.get('/veiculos', { params: { status: 'ATIVO' } }),
-      api.get('/clientes'),
+      api.get('/clientes', { params: { status: 'ATIVO' } }),
     ]);
     setMotoristas(m.data);
     setVeiculos(v.data);

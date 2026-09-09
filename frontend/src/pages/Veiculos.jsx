@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, Power, PowerOff } from 'lucide-react';
 import api from '../api/client';
 
 const vazio = { placa: '', modelo: '', capacidadeCarga: '', status: 'ATIVO' };
@@ -65,6 +65,16 @@ export default function Veiculos() {
     }
   }
 
+  async function alternarStatus(veiculo) {
+    const novoStatus = veiculo.status === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+    try {
+      await api.put(`/veiculos/${veiculo.id}`, { status: novoStatus });
+      carregar();
+    } catch (err) {
+      alert(err.response?.data?.erro || 'Erro ao atualizar status do veiculo.');
+    }
+  }
+
   return (
     <div>
       <div className="cabecalho-pagina">
@@ -105,8 +115,15 @@ export default function Veiculos() {
                     <td><span className={`badge ${statusClasse[v.status]}`}>{statusRotulo[v.status]}</span></td>
                     <td>
                       <div className="acoes-tabela">
+                        <button
+                          className="btn btn-texto"
+                          title={v.status === 'ATIVO' ? 'Desativar veiculo' : 'Ativar veiculo'}
+                          onClick={() => alternarStatus(v)}
+                        >
+                          {v.status === 'ATIVO' ? <PowerOff size={16} color="#d1273d" /> : <Power size={16} color="#1a7f4e" />}
+                        </button>
                         <button className="btn btn-texto" onClick={() => abrirEdicao(v)}><Pencil size={16} /></button>
-                        <button className="btn btn-texto" onClick={() => excluir(v.id)}><Trash2 size={16} color="#d1273d" /></button>
+                        <button className="btn btn-texto" title="Excluir permanentemente" onClick={() => excluir(v.id)}><Trash2 size={16} color="#d1273d" /></button>
                       </div>
                     </td>
                   </tr>

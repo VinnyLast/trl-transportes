@@ -4,6 +4,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticar } = require('../middleware/auth');
 const { validarCPF, limparNumeros } = require('../utils/validators');
+const { tratarErroExclusao } = require('../utils/erros');
 
 const router = express.Router();
 router.use(autenticar);
@@ -102,7 +103,7 @@ router.put('/:id', async (req, res) => {
     });
     res.json(comIndicadorSenha(motorista));
   } catch (err) {
-    res.status(404).json({ erro: 'Motorista nao encontrado.' });
+    tratarErroExclusao(err, res, 'Motorista');
   }
 });
 
@@ -111,7 +112,7 @@ router.delete('/:id', async (req, res) => {
     await prisma.motorista.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (err) {
-    res.status(404).json({ erro: 'Motorista nao encontrado.' });
+    tratarErroExclusao(err, res, 'Motorista');
   }
 });
 

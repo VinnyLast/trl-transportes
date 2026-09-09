@@ -30,6 +30,11 @@ enum StatusRota {
   CANCELADA
 }
 
+enum StatusCliente {
+  ATIVO
+  INATIVO
+}
+
 model Usuario {
   id        String   @id @default(uuid())
   nome      String
@@ -68,12 +73,13 @@ model Veiculo {
 }
 
 model Cliente {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   nome      String
   endereco  String
   contato   String?
-  criadoEm  DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  status    StatusCliente @default(ATIVO)
+  criadoEm  DateTime      @default(now())
+  atualizadoEm DateTime   @updatedAt
   rotas     Rota[]
 }
 
