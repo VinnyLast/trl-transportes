@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { PlayCircle, StopCircle, LogOut, Truck, List, Keyboard } from 'lucide-react';
 import motoristaApi, { limparSessaoMotorista } from '../api/motoristaClient';
 import logo from '../assets/logo-trl-trim.png';
+import Rodape from '../components/Rodape';
 
 function formatarCpfDigitado(valor) {
   const digitos = valor.replace(/\D/g, '').slice(0, 11);
@@ -184,6 +185,7 @@ export default function PainelMotorista() {
             </button>
           </form>
         </div>
+        <Rodape />
       </div>
     );
   }
@@ -305,6 +307,7 @@ export default function PainelMotorista() {
           <LogOut size={14} /> Sair
         </button>
       </div>
+      <Rodape />
     </div>
   );
 }

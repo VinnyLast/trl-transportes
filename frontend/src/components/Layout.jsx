@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Truck, LayoutDashboard, Users, Route as RouteIcon, Building2, LogOut, MapPinned, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-trl-trim.png';
+import Rodape from './Rodape';
 
 const itens = [
   { to: '/', label: 'Painel', icone: LayoutDashboard, fim: true },
@@ -65,6 +66,7 @@ export default function Layout({ children }) {
           </div>
         </header>
         <main className="pagina">{children}</main>
+        <Rodape />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Mail, IdCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-trl-trim.png';
+import Rodape from '../components/Rodape';
 
 function formatarCpfDigitado(valor) {
   const digitos = valor.replace(/\D/g, '').slice(0, 11);
@@ -109,6 +110,7 @@ export default function Login() {
 
         <a href="/motorista" className="link-motorista">Sou motorista, registrar rota</a>
       </form>
+      <Rodape />
     </div>
   );
 }

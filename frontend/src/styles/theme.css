@@ -586,6 +586,7 @@ tr:last-child td {
 .tela-login {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background:
@@ -680,6 +681,7 @@ tr:last-child td {
 .tela-motorista {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background:
@@ -790,6 +792,43 @@ tr:last-child td {
 
 .rodape-tabela {
   overflow-x: auto;
+}
+
+.rodape-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  padding: 24px 20px 8px;
+  font-size: 12px;
+  color: var(--cinza-texto-suave);
+}
+
+.rodape-app a {
+  color: var(--cinza-texto);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rodape-app a:hover {
+  color: var(--azul-primario);
+  text-decoration: underline;
+}
+
+.tela-login .rodape-app,
+.tela-motorista .rodape-app {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.tela-login .rodape-app a,
+.tela-motorista .rodape-app a {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tela-login .rodape-app a:hover,
+.tela-motorista .rodape-app a:hover {
+  color: var(--branco);
 }
 
 @media (max-width: 900px) {
