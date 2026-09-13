@@ -54,10 +54,14 @@ export default function Rotas() {
   const [erro, setErro] = useState('');
 
   async function carregarAuxiliares() {
+    // Carrega TODOS os motoristas/veiculos/clientes (nao so os ativos): uma rota
+    // antiga pode estar vinculada a um motorista/veiculo ja desativado, e ele
+    // precisa continuar aparecendo no formulario de edicao, senao a rota fica
+    // "orfa" no select e nao da pra salvar. Os inativos aparecem marcados.
     const [m, v, c, t] = await Promise.all([
-      api.get('/motoristas', { params: { status: 'ATIVO' } }),
-      api.get('/veiculos', { params: { status: 'ATIVO' } }),
-      api.get('/clientes', { params: { status: 'ATIVO' } }),
+      api.get('/motoristas'),
+      api.get('/veiculos'),
+      api.get('/clientes'),
       api.get('/trajetos-fixos', { params: { status: 'ATIVO' } }),
     ]);
     setMotoristas(m.data);
@@ -295,7 +299,7 @@ export default function Rotas() {
                 <select required value={form.motoristaId} onChange={(e) => setForm({ ...form, motoristaId: e.target.value })}>
                   <option value="">Selecione...</option>
                   {motoristas.map((m) => (
-                    <option key={m.id} value={m.id}>{m.nome}</option>
+                    <option key={m.id} value={m.id}>{m.nome}{m.status !== 'ATIVO' ? ' (inativo)' : ''}</option>
                   ))}
                 </select>
               </div>
@@ -304,7 +308,7 @@ export default function Rotas() {
                 <select required value={form.veiculoId} onChange={(e) => setForm({ ...form, veiculoId: e.target.value })}>
                   <option value="">Selecione...</option>
                   {veiculos.map((v) => (
-                    <option key={v.id} value={v.id}>{v.placa} - {v.modelo}</option>
+                    <option key={v.id} value={v.id}>{v.placa} - {v.modelo}{v.status !== 'ATIVO' ? ` (${v.status === 'MANUTENCAO' ? 'manutencao' : 'inativo'})` : ''}</option>
                   ))}
                 </select>
               </div>
@@ -313,7 +317,7 @@ export default function Rotas() {
                 <select value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })}>
                   <option value="">Nenhum</option>
                   {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
+                    <option key={c.id} value={c.id}>{c.nome}{c.status !== 'ATIVO' ? ' (inativo)' : ''}</option>
                   ))}
                 </select>
               </div>

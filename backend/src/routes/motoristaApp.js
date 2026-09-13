@@ -5,6 +5,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticarMotorista } = require('../middleware/auth');
 const { validarCPF, limparNumeros, validarPlaca, normalizarPlaca } = require('../utils/validators');
+const { limiteLogin } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ const loginSchema = z.object({
   senha: z.string().min(1),
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', limiteLogin, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ erro: 'Informe o CPF e a senha.' });
 
