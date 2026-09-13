@@ -58,16 +58,18 @@ export default function Rotas() {
     // antiga pode estar vinculada a um motorista/veiculo ja desativado, e ele
     // precisa continuar aparecendo no formulario de edicao, senao a rota fica
     // "orfa" no select e nao da pra salvar. Os inativos aparecem marcados.
-    const [m, v, c, t] = await Promise.all([
+    // Usa allSettled: se uma dessas buscas falhar, as outras continuam
+    // preenchendo o formulario normalmente, em vez de travar tudo.
+    const [m, v, c, t] = await Promise.allSettled([
       api.get('/motoristas'),
       api.get('/veiculos'),
       api.get('/clientes'),
       api.get('/trajetos-fixos', { params: { status: 'ATIVO' } }),
     ]);
-    setMotoristas(m.data);
-    setVeiculos(v.data);
-    setClientes(c.data);
-    setTrajetosFixos(t.data);
+    if (m.status === 'fulfilled') setMotoristas(m.value.data);
+    if (v.status === 'fulfilled') setVeiculos(v.value.data);
+    if (c.status === 'fulfilled') setClientes(c.value.data);
+    if (t.status === 'fulfilled') setTrajetosFixos(t.value.data);
   }
 
   function buscarValorTrajetoFixo(origem, destino) {
