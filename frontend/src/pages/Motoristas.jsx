@@ -35,8 +35,8 @@ export default function Motoristas() {
     setForm({
       nome: motorista.nome,
       cpf: motorista.cpf,
-      cnhNumero: motorista.cnhNumero,
-      cnhCategoria: motorista.cnhCategoria,
+      cnhNumero: motorista.cnhNumero || '',
+      cnhCategoria: motorista.cnhCategoria || '',
       telefone: motorista.telefone,
       status: motorista.status,
       senha: '',
@@ -126,7 +126,7 @@ export default function Motoristas() {
                   <tr key={m.id}>
                     <td>{m.nome}</td>
                     <td>{m.cpf}</td>
-                    <td>{m.cnhNumero} / {m.cnhCategoria}</td>
+                    <td>{m.cnhNumero || m.cnhCategoria ? `${m.cnhNumero || '-'} / ${m.cnhCategoria || '-'}` : '-'}</td>
                     <td>{m.telefone}</td>
                     <td>
                       <span className={`badge ${m.status === 'ATIVO' ? 'badge-verde' : 'badge-cinza'}`}>
@@ -187,12 +187,12 @@ export default function Motoristas() {
                 <input required placeholder="000.000.000-00" value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} />
               </div>
               <div className="campo">
-                <label>Numero da CNH</label>
-                <input required value={form.cnhNumero} onChange={(e) => setForm({ ...form, cnhNumero: e.target.value })} />
+                <label>Numero da CNH (opcional)</label>
+                <input value={form.cnhNumero} onChange={(e) => setForm({ ...form, cnhNumero: e.target.value })} />
               </div>
               <div className="campo">
-                <label>Categoria da CNH</label>
-                <input required placeholder="Ex.: E" value={form.cnhCategoria} onChange={(e) => setForm({ ...form, cnhCategoria: e.target.value })} />
+                <label>Categoria da CNH (opcional)</label>
+                <input placeholder="Ex.: E" value={form.cnhCategoria} onChange={(e) => setForm({ ...form, cnhCategoria: e.target.value })} />
               </div>
               <div className="campo">
                 <label>Telefone</label>

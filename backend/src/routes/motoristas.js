@@ -34,12 +34,17 @@ function comIndicadorSenha(motorista) {
 const motoristaSchema = z.object({
   nome: z.string().min(2),
   cpf: z.string().refine(validarCPF, { message: 'CPF invalido.' }),
-  cnhNumero: z.string().min(1),
-  cnhCategoria: z.string().min(1),
+  cnhNumero: z.string().optional().nullable(),
+  cnhCategoria: z.string().optional().nullable(),
   telefone: z.string().min(8),
   status: z.enum(['ATIVO', 'INATIVO']).optional(),
   senha: z.string().min(4, 'A senha deve ter pelo menos 4 caracteres.').optional().or(z.literal('')),
 });
+
+// Campos de texto opcionais: converte string vazia em null antes de salvar
+function normalizarOpcional(valor) {
+  return valor && valor.trim() ? valor.trim() : null;
+}
 
 router.get('/', async (req, res) => {
   const { status, busca } = req.query;
@@ -68,7 +73,12 @@ router.post('/', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ erro: 'Dados invalidos.', detalhes: parsed.error.flatten() });
 
   const { senha, ...resto } = parsed.data;
-  const dados = { ...resto, cpf: limparNumeros(parsed.data.cpf) };
+  const dados = {
+    ...resto,
+    cpf: limparNumeros(parsed.data.cpf),
+    cnhNumero: normalizarOpcional(parsed.data.cnhNumero),
+    cnhCategoria: normalizarOpcional(parsed.data.cnhCategoria),
+  };
 
   const existente = await prisma.motorista.findUnique({ where: { cpf: dados.cpf } });
   if (existente) return res.status(409).json({ erro: 'Ja existe um motorista com este CPF.' });
@@ -96,6 +106,8 @@ router.put('/:id', async (req, res) => {
   const { senha, ...resto } = parsed.data;
   const dados = { ...resto };
   if (dados.cpf) dados.cpf = limparNumeros(dados.cpf);
+  if ('cnhNumero' in dados) dados.cnhNumero = normalizarOpcional(dados.cnhNumero);
+  if ('cnhCategoria' in dados) dados.cnhCategoria = normalizarOpcional(dados.cnhCategoria);
   if (senha) {
     dados.senhaHash = await bcrypt.hash(senha, 10);
   }

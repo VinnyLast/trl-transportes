@@ -183,6 +183,8 @@ export default function PainelMotorista() {
             <button type="submit" className="btn btn-primario btn-gigante" disabled={carregando}>
               {carregando ? 'Entrando...' : 'Entrar'}
             </button>
+
+            <a href="/login" className="link-motorista">Sou administrador, fazer login</a>
           </form>
         </div>
         <Rodape />

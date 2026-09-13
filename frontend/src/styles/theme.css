@@ -331,8 +331,10 @@ tr:last-child td {
   min-height: 100vh;
 }
 
+/* Menu lateral recolhido por padrao (so icones); expande ao passar o mouse.
+   Fica fixo e sobreposto ao conteudo (nao empurra a pagina ao expandir). */
 .barra-lateral {
-  width: 234px;
+  width: 76px;
   background: linear-gradient(190deg, var(--azul-primario) 0%, var(--azul-mais-escuro) 100%);
   color: var(--branco);
   display: flex;
@@ -340,8 +342,18 @@ tr:last-child td {
   padding: 22px 14px;
   flex-shrink: 0;
   box-shadow: 4px 0 24px rgba(5, 15, 40, 0.18);
-  position: relative;
-  z-index: 5;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s ease;
+}
+
+.barra-lateral:hover {
+  width: 234px;
+  box-shadow: 10px 0 40px rgba(5, 15, 40, 0.32);
 }
 
 .barra-lateral .logo {
@@ -349,6 +361,16 @@ tr:last-child td {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  padding: 6px 0 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.15s ease, max-height 0.22s ease, padding 0.22s ease;
+}
+
+.barra-lateral:hover .logo {
+  max-height: 120px;
+  opacity: 1;
   padding: 6px 10px 26px;
 }
 
@@ -374,10 +396,26 @@ tr:last-child td {
   letter-spacing: -0.01em;
 }
 
+.nav-icone {
+  flex-shrink: 0;
+}
+
+.nav-label {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, max-width 0.22s ease;
+}
+
+.barra-lateral:hover .nav-label {
+  opacity: 1;
+  max-width: 160px;
+}
+
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--branco);
-  transform: translateX(2px);
 }
 
 .nav-link.ativo {
@@ -389,6 +427,7 @@ tr:last-child td {
 .conteudo {
   flex: 1;
   min-width: 0;
+  margin-left: 76px;
 }
 
 .topo {
@@ -835,21 +874,30 @@ tr:last-child td {
   .layout {
     flex-direction: column;
   }
-  .barra-lateral {
+  .barra-lateral,
+  .barra-lateral:hover {
     width: 100%;
+    position: static;
     flex-direction: row;
     align-items: center;
     overflow-x: auto;
     padding: 10px 12px;
     box-shadow: 0 4px 24px rgba(5, 15, 40, 0.18);
   }
-  .barra-lateral .logo {
+  .barra-lateral .logo,
+  .barra-lateral:hover .logo {
+    display: flex;
+    max-height: none;
+    opacity: 1;
     padding: 0 12px 0 0;
   }
-  .nav-link {
+  .nav-label,
+  .barra-lateral:hover .nav-label {
+    opacity: 1;
+    max-width: none;
     white-space: nowrap;
   }
-  .nav-link:hover {
-    transform: none;
+  .conteudo {
+    margin-left: 0;
   }
 }

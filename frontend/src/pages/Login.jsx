@@ -108,7 +108,6 @@ export default function Login() {
           {enviando ? 'Entrando...' : 'Entrar'}
         </button>
 
-        <a href="/motorista" className="link-motorista">Sou motorista, registrar rota</a>
       </form>
       <Rodape />
     </div>

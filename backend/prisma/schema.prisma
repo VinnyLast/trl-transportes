@@ -56,8 +56,8 @@ model Motorista {
   id        String          @id @default(uuid())
   nome      String
   cpf       String          @unique
-  cnhNumero String
-  cnhCategoria String
+  cnhNumero String?
+  cnhCategoria String?
   telefone  String
   senhaHash String?
   status    StatusMotorista @default(ATIVO)

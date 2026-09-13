@@ -40,9 +40,10 @@ export default function Layout({ children }) {
             to={item.to}
             end={item.fim}
             className={({ isActive }) => 'nav-link' + (isActive ? ' ativo' : '')}
+            title={item.label}
           >
-            <item.icone size={18} />
-            {item.label}
+            <item.icone size={18} className="nav-icone" />
+            <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
       </aside>
