@@ -33,6 +33,41 @@
   --transicao: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Modo escuro: aplicado apenas dentro do painel administrativo (.layout),
+   nao afeta a tela de login nem o aplicativo do motorista */
+.layout[data-theme='dark'] {
+  --azul-claro: #16274a;
+  --vermelho-claro: #3a1a20;
+  --verde-claro: #103426;
+  --branco: #171e30;
+  --cinza-fundo: #0e1322;
+  --cinza-fundo-forte: #1b2338;
+  --cinza-borda: #2a3350;
+  --cinza-borda-forte: #38436a;
+  --cinza-texto: #a7b0c4;
+  --cinza-texto-suave: #7883a0;
+  --cinza-texto-forte: #eef1f8;
+
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --sombra: 0 2px 10px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sombra-md: 0 10px 28px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.layout[data-theme='dark'] {
+  background: var(--cinza-fundo);
+  color-scheme: dark;
+}
+
+.layout[data-theme='dark'] .badge-azul {
+  color: #7fa8f0;
+}
+.layout[data-theme='dark'] .badge-verde {
+  color: #4fd399;
+}
+.layout[data-theme='dark'] .badge-vermelho {
+  color: #ff7a8a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -318,7 +353,7 @@ tr:last-child td {
 }
 
 .barra-lateral .logo img {
-  background: var(--branco);
+  background: #ffffff;
   border-radius: var(--raio-sm);
   padding: 8px;
   box-shadow: var(--sombra-md);
@@ -368,6 +403,11 @@ tr:last-child td {
   position: sticky;
   top: 0;
   z-index: 4;
+  transition: background-color var(--transicao), border-color var(--transicao);
+}
+
+.layout[data-theme='dark'] .topo {
+  background: rgba(23, 30, 48, 0.85);
 }
 
 .pagina {
