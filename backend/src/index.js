@@ -10,6 +10,7 @@ const veiculosRoutes = require('./routes/veiculos');
 const clientesRoutes = require('./routes/clientes');
 const rotasRoutes = require('./routes/rotas');
 const motoristaAppRoutes = require('./routes/motoristaApp');
+const trajetosFixosRoutes = require('./routes/trajetosFixos');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/veiculos', veiculosRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/rotas', rotasRoutes);
 app.use('/api/motorista-app', motoristaAppRoutes);
+app.use('/api/trajetos-fixos', trajetosFixosRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ erro: 'Rota de API nao encontrada.' });

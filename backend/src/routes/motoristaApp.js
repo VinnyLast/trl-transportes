@@ -125,22 +125,35 @@ router.post('/iniciar', async (req, res) => {
     }
   }
 
-  const valorPadrao = Number(process.env.VALOR_ROTA_PADRAO || 0);
+  const origem = parsed.data.origem.trim();
+  const destino = parsed.data.destino.trim();
+
+  // Se origem/destino batem com um trajeto fixo cadastrado, usa o valor dele.
+  // Caso contrario, usa o valor padrao configurado (rota nao fixa, com valor livre).
+  const trajetoFixo = await prisma.trajetoFixo.findFirst({
+    where: {
+      status: 'ATIVO',
+      origem: { equals: origem, mode: 'insensitive' },
+      destino: { equals: destino, mode: 'insensitive' },
+    },
+  });
+
+  const valor = trajetoFixo ? Number(trajetoFixo.valor) : Number(process.env.VALOR_ROTA_PADRAO || 0);
 
   const rota = await prisma.rota.create({
     data: {
       motoristaId: req.motorista.id,
       veiculoId: veiculo.id,
-      origem: parsed.data.origem.trim(),
-      destino: parsed.data.destino.trim(),
+      origem,
+      destino,
       dataSaida: new Date(),
-      valor: valorPadrao,
+      valor,
       status: 'EM_ANDAMENTO',
     },
     include: includeResumo,
   });
 
-  res.status(201).json({ motorista: req.motorista, rota });
+  res.status(201).json({ motorista: req.motorista, rota, trajetoFixo: Boolean(trajetoFixo) });
 });
 
 router.post('/finalizar', async (req, res) => {

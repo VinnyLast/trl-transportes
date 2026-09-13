@@ -35,6 +35,11 @@ enum StatusCliente {
   INATIVO
 }
 
+enum StatusTrajetoFixo {
+  ATIVO
+  INATIVO
+}
+
 model Usuario {
   id        String   @id @default(uuid())
   nome      String
@@ -81,6 +86,22 @@ model Cliente {
   criadoEm  DateTime      @default(now())
   atualizadoEm DateTime   @updatedAt
   rotas     Rota[]
+}
+
+// Trajetos com valor pre-definido (ex.: Salvador -> Feira de Santana = R$ 350).
+// Ao criar uma rota (pelo admin ou pelo app do motorista) com origem/destino
+// que batem com um trajeto fixo ativo, o valor e preenchido automaticamente.
+// Rotas fora da tabela continuam com valor livre/manual.
+model TrajetoFixo {
+  id        String            @id @default(uuid())
+  origem    String
+  destino   String
+  valor     Decimal           @db.Decimal(10, 2)
+  status    StatusTrajetoFixo @default(ATIVO)
+  criadoEm  DateTime          @default(now())
+  atualizadoEm DateTime       @updatedAt
+
+  @@unique([origem, destino])
 }
 
 model Rota {

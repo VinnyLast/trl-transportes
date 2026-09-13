@@ -8,6 +8,7 @@ import Motoristas from './pages/Motoristas';
 import Veiculos from './pages/Veiculos';
 import Clientes from './pages/Clientes';
 import Rotas from './pages/Rotas';
+import TrajetosFixos from './pages/TrajetosFixos';
 
 function RotaPrivada({ children }) {
   const { usuario, carregando } = useAuth();
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/motorista" element={<PainelMotorista />} />
       <Route path="/" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
       <Route path="/rotas" element={<RotaPrivada><Rotas /></RotaPrivada>} />
+      <Route path="/trajetos-fixos" element={<RotaPrivada><TrajetosFixos /></RotaPrivada>} />
       <Route path="/motoristas" element={<RotaPrivada><Motoristas /></RotaPrivada>} />
       <Route path="/veiculos" element={<RotaPrivada><Veiculos /></RotaPrivada>} />
       <Route path="/clientes" element={<RotaPrivada><Clientes /></RotaPrivada>} />

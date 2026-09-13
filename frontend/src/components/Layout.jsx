@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Truck, LayoutDashboard, Users, Route as RouteIcon, Building2, LogOut } from 'lucide-react';
+import { Truck, LayoutDashboard, Users, Route as RouteIcon, Building2, LogOut, MapPinned } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-trl-trim.png';
 
 const itens = [
   { to: '/', label: 'Painel', icone: LayoutDashboard, fim: true },
   { to: '/rotas', label: 'Rotas', icone: RouteIcon },
+  { to: '/trajetos-fixos', label: 'Trajetos fixos', icone: MapPinned },
   { to: '/motoristas', label: 'Motoristas', icone: Users },
   { to: '/veiculos', label: 'Veiculos', icone: Truck },
   { to: '/clientes', label: 'Clientes', icone: Building2 },

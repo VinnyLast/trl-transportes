@@ -46,6 +46,7 @@ export default function Rotas() {
   const [motoristas, setMotoristas] = useState([]);
   const [veiculos, setVeiculos] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const [trajetosFixos, setTrajetosFixos] = useState([]);
   const [filtros, setFiltros] = useState({ status: '', motoristaId: '', veiculoId: '', dataInicio: '', dataFim: '' });
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(vazio);
@@ -53,14 +54,31 @@ export default function Rotas() {
   const [erro, setErro] = useState('');
 
   async function carregarAuxiliares() {
-    const [m, v, c] = await Promise.all([
+    const [m, v, c, t] = await Promise.all([
       api.get('/motoristas', { params: { status: 'ATIVO' } }),
       api.get('/veiculos', { params: { status: 'ATIVO' } }),
       api.get('/clientes', { params: { status: 'ATIVO' } }),
+      api.get('/trajetos-fixos', { params: { status: 'ATIVO' } }),
     ]);
     setMotoristas(m.data);
     setVeiculos(v.data);
     setClientes(c.data);
+    setTrajetosFixos(t.data);
+  }
+
+  function buscarValorTrajetoFixo(origem, destino) {
+    const encontrado = trajetosFixos.find(
+      (t) => t.origem.trim().toLowerCase() === origem.trim().toLowerCase() && t.destino.trim().toLowerCase() === destino.trim().toLowerCase()
+    );
+    return encontrado ? encontrado.valor : null;
+  }
+
+  function aoSairDoCampoOrigemDestino(origemAtual, destinoAtual) {
+    if (!origemAtual || !destinoAtual) return;
+    const valorFixo = buscarValorTrajetoFixo(origemAtual, destinoAtual);
+    if (valorFixo !== null && (form.valor === '' || form.valor === undefined)) {
+      setForm((atual) => ({ ...atual, valor: valorFixo }));
+    }
   }
 
   async function carregar() {
@@ -310,11 +328,21 @@ export default function Rotas() {
               </div>
               <div className="campo">
                 <label>Origem</label>
-                <input required value={form.origem} onChange={(e) => setForm({ ...form, origem: e.target.value })} />
+                <input
+                  required
+                  value={form.origem}
+                  onChange={(e) => setForm({ ...form, origem: e.target.value })}
+                  onBlur={() => aoSairDoCampoOrigemDestino(form.origem, form.destino)}
+                />
               </div>
               <div className="campo">
                 <label>Destino</label>
-                <input required value={form.destino} onChange={(e) => setForm({ ...form, destino: e.target.value })} />
+                <input
+                  required
+                  value={form.destino}
+                  onChange={(e) => setForm({ ...form, destino: e.target.value })}
+                  onBlur={() => aoSairDoCampoOrigemDestino(form.origem, form.destino)}
+                />
               </div>
               <div className="campo">
                 <label>Data/hora de saida</label>
@@ -325,7 +353,12 @@ export default function Rotas() {
                 <input type="datetime-local" value={form.dataChegada} onChange={(e) => setForm({ ...form, dataChegada: e.target.value })} />
               </div>
               <div className="campo">
-                <label>Valor fixo da rota (R$)</label>
+                <label>
+                  Valor da rota (R$)
+                  {buscarValorTrajetoFixo(form.origem, form.destino) !== null && (
+                    <span className="badge badge-azul" style={{ marginLeft: 8, fontSize: 11 }}>Trajeto fixo</span>
+                  )}
+                </label>
                 <input required type="number" step="0.01" min="0" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
               </div>
             </div>

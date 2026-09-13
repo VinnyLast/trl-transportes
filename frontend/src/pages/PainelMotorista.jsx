@@ -106,7 +106,12 @@ export default function PainelMotorista() {
 
       const res = await motoristaApi.post('/motorista-app/iniciar', payload);
       setRotaAtiva(res.data.rota);
-      setMensagem(`Rota iniciada as ${new Date(res.data.rota.dataSaida).toLocaleTimeString('pt-BR')}.`);
+      const horario = new Date(res.data.rota.dataSaida).toLocaleTimeString('pt-BR');
+      setMensagem(
+        res.data.trajetoFixo
+          ? `Rota iniciada as ${horario}. Trajeto fixo identificado.`
+          : `Rota iniciada as ${horario}.`
+      );
     } catch (err) {
       setErro(err.response?.data?.erro || 'Nao foi possivel iniciar a rota.');
     } finally {
