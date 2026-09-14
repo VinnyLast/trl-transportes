@@ -226,3 +226,48 @@ npm run build
 ```
 
 Nesse cenario, configure o Nginx do host para servir os arquivos estaticos de `frontend/dist` diretamente em vez de fazer proxy para o container do frontend, mantendo o proxy de `/api/` para `http://127.0.0.1:3001/api/`.
+
+## Backup e resiliencia (producao)
+
+Estes passos protegem contra perda de dados e queda do sistema. Sao configurados uma unica vez na VPS.
+
+### Backup automatico do banco de dados
+
+O script `scripts/backup-db.sh` faz um dump diario do PostgreSQL e apaga backups com mais de 14 dias automaticamente.
+
+```bash
+# 1. Guarda a senha do banco de forma segura (nao fica exposta no script nem no cron)
+echo "127.0.0.1:5432:trl_transportes:trl_user:SUA_SENHA_AQUI" > ~/.pgpass
+chmod 600 ~/.pgpass
+
+# 2. Copia o script para um local fixo e da permissao de execucao
+mkdir -p /root/scripts
+cp /var/www/trl-transportes/scripts/backup-db.sh /root/scripts/backup-db.sh
+chmod +x /root/scripts/backup-db.sh
+
+# 3. Agenda no cron (todo dia as 3h da manha)
+crontab -e
+# adicione a linha:
+# 0 3 * * * /root/scripts/backup-db.sh >> /root/backups/trl-transportes/backup.log 2>&1
+```
+
+Para restaurar um backup (ex.: apos um problema serio):
+
+```bash
+pg_restore -h 127.0.0.1 -U trl_user -d trl_transportes --clean --if-exists /root/backups/trl-transportes/trl_transportes_AAAA-MM-DD_HHMM.dump
+```
+
+### O backend sobrevive a reinicializacoes da VPS
+
+Depois de subir o backend com `pm2 start`, rode uma unica vez:
+
+```bash
+pm2 save
+pm2 startup
+```
+
+O `pm2 startup` imprime um comando (comecando com `sudo env PATH=...`) — copie e rode esse comando exatamente como ele mostrar. Isso registra o PM2 como servico do sistema, entao se a VPS reiniciar (por atualizacao de seguranca, por exemplo), o backend volta a rodar sozinho, sem precisar de intervencao manual.
+
+### Erros no servidor nao derrubam a aplicacao
+
+A API ja esta configurada para que um erro inesperado em qualquer rota retorne "erro interno" ao usuario em vez de derrubar o processo inteiro (`express-async-errors` + tratamento de erro global em `backend/src/index.js`). O PM2 tambem reinicia o processo automaticamente caso ele venha a cair por qualquer outro motivo.
