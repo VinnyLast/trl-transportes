@@ -7,12 +7,24 @@ const { tratarErroExclusao } = require('../utils/erros');
 const router = express.Router();
 router.use(autenticar);
 
-const trajetoSchema = z.object({
-  origem: z.string().min(1),
-  destino: z.string().min(1),
-  valor: z.coerce.number().nonnegative(),
-  status: z.enum(['ATIVO', 'INATIVO']).optional(),
-});
+// Aceita numero, string vazia ou nulo (campo opcional); string vazia/nulo vira null
+const valorOpcional = z
+  .union([z.coerce.number().nonnegative(), z.literal(''), z.null()])
+  .optional()
+  .transform((v) => (v === '' || v === undefined || v === null ? null : v));
+
+const trajetoSchema = z
+  .object({
+    origem: z.string().min(1),
+    destino: z.string().min(1),
+    valorToco: valorOpcional,
+    valorTresQuartos: valorOpcional,
+    status: z.enum(['ATIVO', 'INATIVO']).optional(),
+  })
+  .refine((dados) => dados.valorToco !== null || dados.valorTresQuartos !== null || (dados.valorToco === undefined && dados.valorTresQuartos === undefined), {
+    message: 'Informe pelo menos um valor (Toco ou 3/4).',
+    path: ['valorToco'],
+  });
 
 router.get('/', async (req, res) => {
   const { status, busca } = req.query;

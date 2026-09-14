@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Power, PowerOff } from 'lucide-react';
 import api, { mensagemErroApi } from '../api/client';
 
-const vazio = { placa: '', modelo: '', capacidadeCarga: '', status: 'ATIVO' };
+const vazio = { placa: '', modelo: '', capacidadeCarga: '', tipo: 'OUTRO', status: 'ATIVO' };
 
 const statusRotulo = { ATIVO: 'Ativo', MANUTENCAO: 'Em manutencao', INATIVO: 'Inativo' };
 const statusClasse = { ATIVO: 'badge-verde', MANUTENCAO: 'badge-vermelho', INATIVO: 'badge-cinza' };
+
+const tipoRotulo = { TOCO: 'Toco', TRES_QUARTOS: '3/4', OUTRO: 'Outro' };
 
 export default function Veiculos() {
   const [lista, setLista] = useState([]);
@@ -33,7 +35,7 @@ export default function Veiculos() {
   }
 
   function abrirEdicao(v) {
-    setForm({ placa: v.placa, modelo: v.modelo, capacidadeCarga: v.capacidadeCarga || '', status: v.status });
+    setForm({ placa: v.placa, modelo: v.modelo, capacidadeCarga: v.capacidadeCarga || '', tipo: v.tipo || 'OUTRO', status: v.status });
     setEditandoId(v.id);
     setErro('');
     setModalAberto(true);
@@ -101,6 +103,7 @@ export default function Veiculos() {
                 <tr>
                   <th>Placa</th>
                   <th>Modelo</th>
+                  <th>Tipo</th>
                   <th>Capacidade</th>
                   <th>Status</th>
                   <th></th>
@@ -111,6 +114,7 @@ export default function Veiculos() {
                   <tr key={v.id}>
                     <td>{v.placa}</td>
                     <td>{v.modelo}</td>
+                    <td><span className="badge badge-azul">{tipoRotulo[v.tipo] || 'Outro'}</span></td>
                     <td>{v.capacidadeCarga || '-'}</td>
                     <td><span className={`badge ${statusClasse[v.status]}`}>{statusRotulo[v.status]}</span></td>
                     <td>
@@ -156,6 +160,17 @@ export default function Veiculos() {
               <div className="campo">
                 <label>Capacidade de carga (opcional)</label>
                 <input value={form.capacidadeCarga} onChange={(e) => setForm({ ...form, capacidadeCarga: e.target.value })} />
+              </div>
+              <div className="campo">
+                <label>Tipo do caminhao</label>
+                <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+                  <option value="TOCO">Toco</option>
+                  <option value="TRES_QUARTOS">3/4</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+                <span style={{ fontSize: 12, color: 'var(--cinza-texto)' }}>
+                  Usado para aplicar o valor certo dos trajetos fixos (Toco e 3/4 costumam ter precos diferentes).
+                </span>
               </div>
               <div className="campo">
                 <label>Status</label>

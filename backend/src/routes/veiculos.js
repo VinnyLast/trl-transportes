@@ -12,6 +12,7 @@ const veiculoSchema = z.object({
   placa: z.string().refine(validarPlaca, { message: 'Placa invalida. Use o formato ABC1234 ou ABC1D23.' }),
   modelo: z.string().min(1),
   capacidadeCarga: z.string().optional().nullable(),
+  tipo: z.enum(['TOCO', 'TRES_QUARTOS', 'OUTRO']).optional(),
   status: z.enum(['ATIVO', 'MANUTENCAO', 'INATIVO']).optional(),
 });
 

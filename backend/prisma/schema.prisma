@@ -23,6 +23,14 @@ enum StatusVeiculo {
   INATIVO
 }
 
+// Tipo/categoria do caminhao: usado para casar com o valor certo de cada
+// trajeto fixo (ex.: Toco e 3/4 tem precos diferentes para o mesmo destino)
+enum TipoVeiculo {
+  TOCO
+  TRES_QUARTOS
+  OUTRO
+}
+
 enum StatusRota {
   AGENDADA
   EM_ANDAMENTO
@@ -71,6 +79,7 @@ model Veiculo {
   placa          String        @unique
   modelo         String
   capacidadeCarga String?
+  tipo           TipoVeiculo   @default(OUTRO)
   status         StatusVeiculo @default(ATIVO)
   criadoEm       DateTime      @default(now())
   atualizadoEm   DateTime      @updatedAt
@@ -88,18 +97,22 @@ model Cliente {
   rotas     Rota[]
 }
 
-// Trajetos com valor pre-definido (ex.: Salvador -> Feira de Santana = R$ 350).
-// Ao criar uma rota (pelo admin ou pelo app do motorista) com origem/destino
-// que batem com um trajeto fixo ativo, o valor e preenchido automaticamente.
-// Rotas fora da tabela continuam com valor livre/manual.
+// Trajetos com valor pre-definido (ex.: FEC-BA -> Salvador). Cada trajeto pode
+// ter um valor diferente por tipo de veiculo (Toco e 3/4 costumam ter precos
+// diferentes para o mesmo destino). Ao criar uma rota (pelo admin ou pelo app
+// do motorista) com origem/destino que batem com um trajeto fixo ativo, o
+// valor e preenchido automaticamente de acordo com o tipo do veiculo usado.
+// Rotas fora da tabela, ou com um tipo de veiculo sem valor definido para
+// aquele trajeto, continuam com valor livre/manual.
 model TrajetoFixo {
-  id        String            @id @default(uuid())
-  origem    String
-  destino   String
-  valor     Decimal           @db.Decimal(10, 2)
-  status    StatusTrajetoFixo @default(ATIVO)
-  criadoEm  DateTime          @default(now())
-  atualizadoEm DateTime       @updatedAt
+  id               String            @id @default(uuid())
+  origem           String
+  destino          String
+  valorToco        Decimal?          @db.Decimal(10, 2)
+  valorTresQuartos Decimal?          @db.Decimal(10, 2)
+  status           StatusTrajetoFixo @default(ATIVO)
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
 
   @@unique([origem, destino])
 }

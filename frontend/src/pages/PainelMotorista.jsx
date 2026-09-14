@@ -16,6 +16,8 @@ function formatarPlacaDigitada(valor) {
   return valor.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
 }
 
+const ORIGEM_PADRAO = 'FEC-BA';
+
 export default function PainelMotorista() {
   const [logado, setLogado] = useState(() => Boolean(localStorage.getItem('trl_motorista_token')));
   const [nome, setNome] = useState(() => localStorage.getItem('trl_motorista_nome') || '');
@@ -30,7 +32,7 @@ export default function PainelMotorista() {
   const [modoVeiculo, setModoVeiculo] = useState('lista'); // lista | digitar
   const [placaDigitada, setPlacaDigitada] = useState('');
   const [modeloDigitado, setModeloDigitado] = useState('');
-  const [origem, setOrigem] = useState('');
+  const [origem, setOrigem] = useState(ORIGEM_PADRAO);
   const [destino, setDestino] = useState('');
   const [carregandoStatus, setCarregandoStatus] = useState(true);
 
@@ -132,7 +134,7 @@ export default function PainelMotorista() {
       setVeiculoId('');
       setPlacaDigitada('');
       setModeloDigitado('');
-      setOrigem('');
+      setOrigem(ORIGEM_PADRAO);
       setDestino('');
       setModoVeiculo('lista');
     } catch (err) {

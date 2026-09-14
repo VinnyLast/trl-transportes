@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Power, PowerOff, MapPinned } from 'lucide-react';
 import api, { mensagemErroApi } from '../api/client';
 
-const vazio = { origem: '', destino: '', valor: '', status: 'ATIVO' };
+const ORIGEM_PADRAO = 'FEC-BA';
+
+const vazio = { origem: ORIGEM_PADRAO, destino: '', valorToco: '', valorTresQuartos: '', status: 'ATIVO' };
 
 function formatarMoeda(valor) {
-  return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (valor === null || valor === undefined || valor === '') return '-';
+  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 export default function TrajetosFixos() {
@@ -34,7 +37,13 @@ export default function TrajetosFixos() {
   }
 
   function abrirEdicao(t) {
-    setForm({ origem: t.origem, destino: t.destino, valor: t.valor, status: t.status });
+    setForm({
+      origem: t.origem,
+      destino: t.destino,
+      valorToco: t.valorToco ?? '',
+      valorTresQuartos: t.valorTresQuartos ?? '',
+      status: t.status,
+    });
     setEditandoId(t.id);
     setErro('');
     setModalAberto(true);
@@ -86,10 +95,11 @@ export default function TrajetosFixos() {
       </div>
 
       <p style={{ color: 'var(--cinza-texto)', fontSize: 13, marginTop: -12, marginBottom: 20 }}>
-        Cadastre aqui os trajetos com valor pre-definido (ex.: Salvador para Feira de Santana = R$ 350,00).
-        Quando uma rota tiver a mesma origem e destino de um trajeto fixo ativo, o valor e preenchido
-        automaticamente — tanto na criacao manual quanto quando o motorista inicia a rota pelo aplicativo.
-        Rotas fora desta tabela continuam com valor livre.
+        Cadastre aqui os destinos com valor pre-definido a partir de {ORIGEM_PADRAO}, com um preco para caminhao
+        Toco e outro para 3/4 (preencha so o que se aplicar). Quando uma rota tiver a mesma origem/destino de um
+        trajeto fixo ativo, o valor e preenchido automaticamente de acordo com o tipo do veiculo usado — tanto na
+        criacao manual quanto quando o motorista inicia a rota pelo aplicativo. Rotas ou tipos de veiculo fora
+        desta tabela continuam com valor livre.
       </p>
 
       <div className="filtros">
@@ -112,7 +122,8 @@ export default function TrajetosFixos() {
                 <tr>
                   <th>Origem</th>
                   <th>Destino</th>
-                  <th>Valor</th>
+                  <th>Toco</th>
+                  <th>3/4</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -122,7 +133,8 @@ export default function TrajetosFixos() {
                   <tr key={t.id}>
                     <td>{t.origem}</td>
                     <td>{t.destino}</td>
-                    <td>{formatarMoeda(t.valor)}</td>
+                    <td>{formatarMoeda(t.valorToco)}</td>
+                    <td>{formatarMoeda(t.valorTresQuartos)}</td>
                     <td>
                       <span className={`badge ${t.status === 'ATIVO' ? 'badge-verde' : 'badge-cinza'}`}>
                         {t.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
@@ -169,8 +181,12 @@ export default function TrajetosFixos() {
                 <input required value={form.destino} onChange={(e) => setForm({ ...form, destino: e.target.value })} />
               </div>
               <div className="campo">
-                <label>Valor fixo (R$)</label>
-                <input required type="number" step="0.01" min="0" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
+                <label>Valor Toco (R$)</label>
+                <input type="number" step="0.01" min="0" placeholder="Deixe em branco se nao houver" value={form.valorToco} onChange={(e) => setForm({ ...form, valorToco: e.target.value })} />
+              </div>
+              <div className="campo">
+                <label>Valor 3/4 (R$)</label>
+                <input type="number" step="0.01" min="0" placeholder="Deixe em branco se nao houver" value={form.valorTresQuartos} onChange={(e) => setForm({ ...form, valorTresQuartos: e.target.value })} />
               </div>
               <div className="campo">
                 <label>Status</label>

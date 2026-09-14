@@ -14,7 +14,7 @@ const router = express.Router();
 // um token JWT proprio (tipo "motorista"), separado do login administrativo.
 
 const includeResumo = {
-  veiculo: { select: { id: true, placa: true, modelo: true } },
+  veiculo: { select: { id: true, placa: true, modelo: true, tipo: true } },
 };
 
 const loginSchema = z.object({
@@ -129,8 +129,10 @@ router.post('/iniciar', async (req, res) => {
   const origem = parsed.data.origem.trim();
   const destino = parsed.data.destino.trim();
 
-  // Se origem/destino batem com um trajeto fixo cadastrado, usa o valor dele.
-  // Caso contrario, usa o valor padrao configurado (rota nao fixa, com valor livre).
+  // Se origem/destino batem com um trajeto fixo cadastrado, usa o valor dele
+  // de acordo com o tipo do veiculo (Toco/3-4 tem precos diferentes). Se nao
+  // houver valor definido para esse tipo especifico, usa o valor padrao
+  // (rota nao fixa, com valor livre).
   const trajetoFixo = await prisma.trajetoFixo.findFirst({
     where: {
       status: 'ATIVO',
@@ -139,7 +141,15 @@ router.post('/iniciar', async (req, res) => {
     },
   });
 
-  const valor = trajetoFixo ? Number(trajetoFixo.valor) : Number(process.env.VALOR_ROTA_PADRAO || 0);
+  const valorFixoParaTipo = trajetoFixo
+    ? veiculo.tipo === 'TOCO'
+      ? trajetoFixo.valorToco
+      : veiculo.tipo === 'TRES_QUARTOS'
+        ? trajetoFixo.valorTresQuartos
+        : null
+    : null;
+
+  const valor = valorFixoParaTipo !== null ? Number(valorFixoParaTipo) : Number(process.env.VALOR_ROTA_PADRAO || 0);
 
   const rota = await prisma.rota.create({
     data: {
@@ -154,7 +164,7 @@ router.post('/iniciar', async (req, res) => {
     include: includeResumo,
   });
 
-  res.status(201).json({ motorista: req.motorista, rota, trajetoFixo: Boolean(trajetoFixo) });
+  res.status(201).json({ motorista: req.motorista, rota, trajetoFixo: valorFixoParaTipo !== null });
 });
 
 router.post('/finalizar', async (req, res) => {

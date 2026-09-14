@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, CheckCircle2, XCircle, Download } from 'lucide-react';
 import api, { mensagemErroApi } from '../api/client';
 
+const ORIGEM_PADRAO = 'FEC-BA';
+
 const vazio = {
   motoristaId: '',
   veiculoId: '',
   clienteId: '',
-  origem: '',
+  origem: ORIGEM_PADRAO,
   destino: '',
   dataSaida: '',
   dataChegada: '',
@@ -72,19 +74,29 @@ export default function Rotas() {
     if (t.status === 'fulfilled') setTrajetosFixos(t.value.data);
   }
 
-  function buscarValorTrajetoFixo(origem, destino) {
-    const encontrado = trajetosFixos.find(
+  // Acha o trajeto fixo por origem/destino e retorna o valor certo de acordo
+  // com o tipo do veiculo selecionado (Toco e 3/4 costumam ter precos diferentes)
+  function buscarValorTrajetoFixo(origem, destino, veiculoId) {
+    if (!origem || !destino) return null;
+    const trajeto = trajetosFixos.find(
       (t) => t.origem.trim().toLowerCase() === origem.trim().toLowerCase() && t.destino.trim().toLowerCase() === destino.trim().toLowerCase()
     );
-    return encontrado ? encontrado.valor : null;
+    if (!trajeto) return null;
+
+    const veiculo = veiculos.find((v) => v.id === veiculoId);
+    if (veiculo?.tipo === 'TOCO') return trajeto.valorToco ?? null;
+    if (veiculo?.tipo === 'TRES_QUARTOS') return trajeto.valorTresQuartos ?? null;
+    return trajeto.valorToco ?? trajeto.valorTresQuartos ?? null;
   }
 
-  function aoSairDoCampoOrigemDestino(origemAtual, destinoAtual) {
-    if (!origemAtual || !destinoAtual) return;
-    const valorFixo = buscarValorTrajetoFixo(origemAtual, destinoAtual);
-    if (valorFixo !== null && (form.valor === '' || form.valor === undefined)) {
-      setForm((atual) => ({ ...atual, valor: valorFixo }));
+  function tentarPreencherValorFixo(dadosAtualizados) {
+    const { origem, destino, veiculoId, valor } = dadosAtualizados;
+    if (!origem || !destino || !veiculoId) return dadosAtualizados;
+    const valorFixo = buscarValorTrajetoFixo(origem, destino, veiculoId);
+    if (valorFixo !== null && (valor === '' || valor === undefined)) {
+      return { ...dadosAtualizados, valor: valorFixo };
     }
+    return dadosAtualizados;
   }
 
   async function carregar() {
@@ -307,10 +319,18 @@ export default function Rotas() {
               </div>
               <div className="campo">
                 <label>Veiculo</label>
-                <select required value={form.veiculoId} onChange={(e) => setForm({ ...form, veiculoId: e.target.value })}>
+                <select
+                  required
+                  value={form.veiculoId}
+                  onChange={(e) => setForm((atual) => tentarPreencherValorFixo({ ...atual, veiculoId: e.target.value }))}
+                >
                   <option value="">Selecione...</option>
                   {veiculos.map((v) => (
-                    <option key={v.id} value={v.id}>{v.placa} - {v.modelo}{v.status !== 'ATIVO' ? ` (${v.status === 'MANUTENCAO' ? 'manutencao' : 'inativo'})` : ''}</option>
+                    <option key={v.id} value={v.id}>
+                      {v.placa} - {v.modelo}
+                      {v.tipo && v.tipo !== 'OUTRO' ? ` (${v.tipo === 'TOCO' ? 'Toco' : '3/4'})` : ''}
+                      {v.status !== 'ATIVO' ? ` (${v.status === 'MANUTENCAO' ? 'manutencao' : 'inativo'})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -338,7 +358,7 @@ export default function Rotas() {
                   required
                   value={form.origem}
                   onChange={(e) => setForm({ ...form, origem: e.target.value })}
-                  onBlur={() => aoSairDoCampoOrigemDestino(form.origem, form.destino)}
+                  onBlur={() => setForm((atual) => tentarPreencherValorFixo(atual))}
                 />
               </div>
               <div className="campo">
@@ -347,7 +367,7 @@ export default function Rotas() {
                   required
                   value={form.destino}
                   onChange={(e) => setForm({ ...form, destino: e.target.value })}
-                  onBlur={() => aoSairDoCampoOrigemDestino(form.origem, form.destino)}
+                  onBlur={() => setForm((atual) => tentarPreencherValorFixo(atual))}
                 />
               </div>
               <div className="campo">
@@ -361,7 +381,7 @@ export default function Rotas() {
               <div className="campo">
                 <label>
                   Valor da rota (R$)
-                  {buscarValorTrajetoFixo(form.origem, form.destino) !== null && (
+                  {buscarValorTrajetoFixo(form.origem, form.destino, form.veiculoId) !== null && (
                     <span className="badge badge-azul" style={{ marginLeft: 8, fontSize: 11 }}>Trajeto fixo</span>
                   )}
                 </label>
