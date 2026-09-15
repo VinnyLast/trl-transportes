@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PlayCircle, StopCircle, LogOut, Truck, List, Keyboard } from 'lucide-react';
+import { PlayCircle, StopCircle, LogOut, Truck, Camera } from 'lucide-react';
 import motoristaApi, { limparSessaoMotorista } from '../api/motoristaClient';
 import logo from '../assets/logo-trl-trim.png';
 import Rodape from '../components/Rodape';
@@ -10,10 +10,6 @@ function formatarCpfDigitado(valor) {
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-}
-
-function formatarPlacaDigitada(valor) {
-  return valor.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
 }
 
 const ORIGEM_PADRAO = 'FEC-BA';
@@ -29,11 +25,10 @@ export default function PainelMotorista() {
   const [rotaAtiva, setRotaAtiva] = useState(null);
   const [veiculos, setVeiculos] = useState([]);
   const [veiculoId, setVeiculoId] = useState('');
-  const [modoVeiculo, setModoVeiculo] = useState('lista'); // lista | digitar
-  const [placaDigitada, setPlacaDigitada] = useState('');
-  const [modeloDigitado, setModeloDigitado] = useState('');
   const [origem, setOrigem] = useState(ORIGEM_PADRAO);
   const [destino, setDestino] = useState('');
+  const [fotoRomaneio, setFotoRomaneio] = useState(null);
+  const [previewRomaneio, setPreviewRomaneio] = useState('');
   const [carregandoStatus, setCarregandoStatus] = useState(true);
 
   async function carregarStatus() {
@@ -59,6 +54,12 @@ export default function PainelMotorista() {
     if (logado) carregarStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logado]);
+
+  useEffect(() => {
+    return () => {
+      if (previewRomaneio) URL.revokeObjectURL(previewRomaneio);
+    };
+  }, [previewRomaneio]);
 
   async function entrar(e) {
     e.preventDefault();
@@ -87,27 +88,41 @@ export default function PainelMotorista() {
     setErro('');
   }
 
+  function selecionarFoto(arquivo) {
+    if (previewRomaneio) URL.revokeObjectURL(previewRomaneio);
+    setFotoRomaneio(arquivo || null);
+    setPreviewRomaneio(arquivo ? URL.createObjectURL(arquivo) : '');
+  }
+
+  function limparFormularioRota() {
+    setVeiculoId('');
+    setOrigem(ORIGEM_PADRAO);
+    setDestino('');
+    selecionarFoto(null);
+  }
+
   async function iniciarRota(e) {
     e.preventDefault();
     setErro('');
 
-    if (modoVeiculo === 'lista' && !veiculoId) {
+    if (!veiculoId) {
       setErro('Selecione o veiculo.');
       return;
     }
-    if (modoVeiculo === 'digitar' && !placaDigitada) {
-      setErro('Digite a placa do veiculo.');
+    if (!fotoRomaneio) {
+      setErro('Envie a foto do romaneio para iniciar a rota.');
       return;
     }
 
     setCarregando(true);
     try {
-      const payload =
-        modoVeiculo === 'lista'
-          ? { veiculoId, origem, destino }
-          : { placa: placaDigitada, modelo: modeloDigitado, origem, destino };
+      const dadosFormulario = new FormData();
+      dadosFormulario.append('veiculoId', veiculoId);
+      dadosFormulario.append('origem', origem);
+      dadosFormulario.append('destino', destino);
+      dadosFormulario.append('romaneio', fotoRomaneio);
 
-      const res = await motoristaApi.post('/motorista-app/iniciar', payload);
+      const res = await motoristaApi.post('/motorista-app/iniciar', dadosFormulario);
       setRotaAtiva(res.data.rota);
       const horario = new Date(res.data.rota.dataSaida).toLocaleTimeString('pt-BR');
       setMensagem(
@@ -131,12 +146,7 @@ export default function PainelMotorista() {
       setMensagem(`Rota finalizada as ${new Date(res.data.rota.dataChegada).toLocaleTimeString('pt-BR')}.`);
       const resVeiculos = await motoristaApi.get('/motorista-app/veiculos');
       setVeiculos(resVeiculos.data);
-      setVeiculoId('');
-      setPlacaDigitada('');
-      setModeloDigitado('');
-      setOrigem(ORIGEM_PADRAO);
-      setDestino('');
-      setModoVeiculo('lista');
+      limparFormularioRota();
     } catch (err) {
       setErro(err.response?.data?.erro || 'Nao foi possivel finalizar a rota.');
     } finally {
@@ -222,62 +232,20 @@ export default function PainelMotorista() {
           </div>
         ) : (
           <form onSubmit={iniciarRota}>
-            <div className="alternador-login">
-              <button
-                type="button"
-                className={'aba-login' + (modoVeiculo === 'lista' ? ' ativa' : '')}
-                onClick={() => setModoVeiculo('lista')}
+            <div className="campo">
+              <label htmlFor="veiculo-motorista">Veiculo</label>
+              <select
+                id="veiculo-motorista"
+                className="input-grande"
+                value={veiculoId}
+                onChange={(e) => setVeiculoId(e.target.value)}
               >
-                <List size={14} /> Veiculo cadastrado
-              </button>
-              <button
-                type="button"
-                className={'aba-login' + (modoVeiculo === 'digitar' ? ' ativa' : '')}
-                onClick={() => setModoVeiculo('digitar')}
-              >
-                <Keyboard size={14} /> Digitar placa
-              </button>
+                <option value="">Selecione o veiculo...</option>
+                {veiculos.map((v) => (
+                  <option key={v.id} value={v.id}>{v.placa} - {v.modelo}</option>
+                ))}
+              </select>
             </div>
-
-            {modoVeiculo === 'lista' ? (
-              <div className="campo">
-                <label htmlFor="veiculo-motorista">Veiculo</label>
-                <select
-                  id="veiculo-motorista"
-                  className="input-grande"
-                  value={veiculoId}
-                  onChange={(e) => setVeiculoId(e.target.value)}
-                >
-                  <option value="">Selecione o veiculo...</option>
-                  {veiculos.map((v) => (
-                    <option key={v.id} value={v.id}>{v.placa} - {v.modelo}</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <div className="campo">
-                  <label htmlFor="placa-motorista">Placa do veiculo</label>
-                  <input
-                    id="placa-motorista"
-                    className="input-grande"
-                    placeholder="ABC1234"
-                    value={placaDigitada}
-                    onChange={(e) => setPlacaDigitada(formatarPlacaDigitada(e.target.value))}
-                  />
-                </div>
-                <div className="campo">
-                  <label htmlFor="modelo-motorista">Modelo do veiculo (opcional)</label>
-                  <input
-                    id="modelo-motorista"
-                    className="input-grande"
-                    placeholder="Ex.: Volvo FH 540"
-                    value={modeloDigitado}
-                    onChange={(e) => setModeloDigitado(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="campo">
               <label htmlFor="origem-motorista">Origem</label>
@@ -298,6 +266,29 @@ export default function PainelMotorista() {
                 onChange={(e) => setDestino(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="campo">
+              <label htmlFor="romaneio-motorista">Foto do romaneio</label>
+              <label htmlFor="romaneio-motorista" className="btn btn-secundario btn-gigante" style={{ cursor: 'pointer' }}>
+                <Camera size={20} />
+                {fotoRomaneio ? 'Trocar foto' : 'Tirar / escolher foto'}
+              </label>
+              <input
+                id="romaneio-motorista"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={(e) => selecionarFoto(e.target.files?.[0] || null)}
+              />
+              {previewRomaneio && (
+                <img
+                  src={previewRomaneio}
+                  alt="Previa do romaneio"
+                  style={{ marginTop: 10, maxWidth: '100%', borderRadius: 12, border: '1px solid var(--cinza-borda)' }}
+                />
+              )}
             </div>
 
             <button type="submit" className="btn btn-primario btn-gigante" disabled={carregando}>

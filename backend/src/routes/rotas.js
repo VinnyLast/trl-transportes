@@ -1,7 +1,9 @@
 const express = require('express');
+const path = require('path');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticar } = require('../middleware/auth');
+const { PASTA_ROMANEIOS } = require('../lib/uploads');
 
 const router = express.Router();
 router.use(autenticar);
@@ -173,6 +175,15 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     res.status(404).json({ erro: 'Rota nao encontrada.' });
   }
+});
+
+// Foto do romaneio enviada pelo motorista ao iniciar a rota (para o admin conferir)
+router.get('/:id/romaneio', async (req, res) => {
+  const rota = await prisma.rota.findUnique({ where: { id: req.params.id }, select: { fotoRomaneio: true } });
+  if (!rota || !rota.fotoRomaneio) {
+    return res.status(404).json({ erro: 'Esta rota nao tem foto de romaneio registrada.' });
+  }
+  res.sendFile(path.join(PASTA_ROMANEIOS, rota.fotoRomaneio));
 });
 
 // Finaliza a rota: marca como concluida e registra a chegada no momento atual (ou informado)

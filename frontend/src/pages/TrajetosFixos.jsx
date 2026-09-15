@@ -4,7 +4,15 @@ import api, { mensagemErroApi } from '../api/client';
 
 const ORIGEM_PADRAO = 'FEC-BA';
 
-const vazio = { origem: ORIGEM_PADRAO, destino: '', valorToco: '', valorTresQuartos: '', status: 'ATIVO' };
+const vazio = {
+  origem: ORIGEM_PADRAO,
+  destino: '',
+  valorToco: '',
+  valorTresQuartos: '',
+  valorVan: '',
+  valorTruck: '',
+  status: 'ATIVO',
+};
 
 function formatarMoeda(valor) {
   if (valor === null || valor === undefined || valor === '') return '-';
@@ -42,6 +50,8 @@ export default function TrajetosFixos() {
       destino: t.destino,
       valorToco: t.valorToco ?? '',
       valorTresQuartos: t.valorTresQuartos ?? '',
+      valorVan: t.valorVan ?? '',
+      valorTruck: t.valorTruck ?? '',
       status: t.status,
     });
     setEditandoId(t.id);
@@ -95,8 +105,8 @@ export default function TrajetosFixos() {
       </div>
 
       <p style={{ color: 'var(--cinza-texto)', fontSize: 13, marginTop: -12, marginBottom: 20 }}>
-        Cadastre aqui os destinos com valor pre-definido a partir de {ORIGEM_PADRAO}, com um preco para caminhao
-        Toco e outro para 3/4 (preencha so o que se aplicar). Quando uma rota tiver a mesma origem/destino de um
+        Cadastre aqui os destinos com valor pre-definido a partir de {ORIGEM_PADRAO}, com um preco por tipo de
+        veiculo — Toco, 3/4, Van e Truck (preencha so o que se aplicar). Quando uma rota tiver a mesma origem/destino de um
         trajeto fixo ativo, o valor e preenchido automaticamente de acordo com o tipo do veiculo usado — tanto na
         criacao manual quanto quando o motorista inicia a rota pelo aplicativo. Rotas ou tipos de veiculo fora
         desta tabela continuam com valor livre.
@@ -124,6 +134,8 @@ export default function TrajetosFixos() {
                   <th>Destino</th>
                   <th>Toco</th>
                   <th>3/4</th>
+                  <th>Van</th>
+                  <th>Truck</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -135,6 +147,8 @@ export default function TrajetosFixos() {
                     <td>{t.destino}</td>
                     <td>{formatarMoeda(t.valorToco)}</td>
                     <td>{formatarMoeda(t.valorTresQuartos)}</td>
+                    <td>{formatarMoeda(t.valorVan)}</td>
+                    <td>{formatarMoeda(t.valorTruck)}</td>
                     <td>
                       <span className={`badge ${t.status === 'ATIVO' ? 'badge-verde' : 'badge-cinza'}`}>
                         {t.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
@@ -187,6 +201,14 @@ export default function TrajetosFixos() {
               <div className="campo">
                 <label>Valor 3/4 (R$)</label>
                 <input type="number" step="0.01" min="0" placeholder="Deixe em branco se nao houver" value={form.valorTresQuartos} onChange={(e) => setForm({ ...form, valorTresQuartos: e.target.value })} />
+              </div>
+              <div className="campo">
+                <label>Valor Van (R$)</label>
+                <input type="number" step="0.01" min="0" placeholder="Deixe em branco se nao houver" value={form.valorVan} onChange={(e) => setForm({ ...form, valorVan: e.target.value })} />
+              </div>
+              <div className="campo">
+                <label>Valor Truck (R$)</label>
+                <input type="number" step="0.01" min="0" placeholder="Deixe em branco se nao houver" value={form.valorTruck} onChange={(e) => setForm({ ...form, valorTruck: e.target.value })} />
               </div>
               <div className="campo">
                 <label>Status</label>

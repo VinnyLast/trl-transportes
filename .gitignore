@@ -15,5 +15,8 @@ Thumbs.db
 # Prisma
 backend/prisma/dev.db
 
+# Arquivos enviados pelos motoristas (fotos de romaneio) - nao versionar
+backend/uploads/
+
 # Docker
 *.pid

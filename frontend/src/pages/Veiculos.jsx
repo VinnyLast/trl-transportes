@@ -7,7 +7,7 @@ const vazio = { placa: '', modelo: '', capacidadeCarga: '', tipo: 'OUTRO', statu
 const statusRotulo = { ATIVO: 'Ativo', MANUTENCAO: 'Em manutencao', INATIVO: 'Inativo' };
 const statusClasse = { ATIVO: 'badge-verde', MANUTENCAO: 'badge-vermelho', INATIVO: 'badge-cinza' };
 
-const tipoRotulo = { TOCO: 'Toco', TRES_QUARTOS: '3/4', OUTRO: 'Outro' };
+const tipoRotulo = { TOCO: 'Toco', TRES_QUARTOS: '3/4', VAN: 'Van', TRUCK: 'Truck', OUTRO: 'Outro' };
 
 export default function Veiculos() {
   const [lista, setLista] = useState([]);
@@ -166,10 +166,12 @@ export default function Veiculos() {
                 <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
                   <option value="TOCO">Toco</option>
                   <option value="TRES_QUARTOS">3/4</option>
+                  <option value="VAN">Van</option>
+                  <option value="TRUCK">Truck</option>
                   <option value="OUTRO">Outro</option>
                 </select>
                 <span style={{ fontSize: 12, color: 'var(--cinza-texto)' }}>
-                  Usado para aplicar o valor certo dos trajetos fixos (Toco e 3/4 costumam ter precos diferentes).
+                  Usado para aplicar o valor certo dos trajetos fixos (cada tipo pode ter um preco diferente).
                 </span>
               </div>
               <div className="campo">

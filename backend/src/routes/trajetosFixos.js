@@ -19,12 +19,19 @@ const trajetoSchema = z
     destino: z.string().min(1),
     valorToco: valorOpcional,
     valorTresQuartos: valorOpcional,
+    valorVan: valorOpcional,
+    valorTruck: valorOpcional,
     status: z.enum(['ATIVO', 'INATIVO']).optional(),
   })
-  .refine((dados) => dados.valorToco !== null || dados.valorTresQuartos !== null || (dados.valorToco === undefined && dados.valorTresQuartos === undefined), {
-    message: 'Informe pelo menos um valor (Toco ou 3/4).',
-    path: ['valorToco'],
-  });
+  .refine(
+    (dados) => {
+      const valores = [dados.valorToco, dados.valorTresQuartos, dados.valorVan, dados.valorTruck];
+      const algumInformado = valores.some((v) => v !== null && v !== undefined);
+      const nenhumEnviado = valores.every((v) => v === undefined);
+      return algumInformado || nenhumEnviado;
+    },
+    { message: 'Informe pelo menos um valor (Toco, 3/4, Van ou Truck).', path: ['valorToco'] }
+  );
 
 router.get('/', async (req, res) => {
   const { status, busca } = req.query;

@@ -4,14 +4,18 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticarMotorista } = require('../middleware/auth');
-const { validarCPF, limparNumeros, validarPlaca, normalizarPlaca } = require('../utils/validators');
+const { validarCPF, limparNumeros } = require('../utils/validators');
 const { limiteLogin } = require('../middleware/rateLimit');
+const { uploadRomaneio } = require('../lib/uploads');
 
 const router = express.Router();
 
 // App do motorista: login com CPF + senha (definida pelo administrador no
 // cadastro), e depois so as acoes de iniciar/finalizar rota, protegidas por
 // um token JWT proprio (tipo "motorista"), separado do login administrativo.
+// O motorista so pode usar veiculos ja cadastrados pelo administrador (nao
+// cadastra veiculo novo pelo app), e precisa enviar uma foto do romaneio
+// para iniciar a rota - fica registrada para o administrador conferir depois.
 
 const includeResumo = {
   veiculo: { select: { id: true, placa: true, modelo: true, tipo: true } },
@@ -74,23 +78,28 @@ router.get('/veiculos', async (req, res) => {
   res.json(veiculos);
 });
 
-const iniciarSchema = z
-  .object({
-    veiculoId: z.string().uuid().optional(),
-    placa: z.string().optional(),
-    modelo: z.string().optional(),
-    origem: z.string().min(1, 'Informe a origem.'),
-    destino: z.string().min(1, 'Informe o destino.'),
-  })
-  .refine((dados) => dados.veiculoId || dados.placa, {
-    message: 'Selecione um veiculo cadastrado ou digite a placa.',
-  });
+const iniciarSchema = z.object({
+  veiculoId: z.string().uuid({ message: 'Selecione um veiculo cadastrado.' }),
+  origem: z.string().min(1, 'Informe a origem.'),
+  destino: z.string().min(1, 'Informe o destino.'),
+});
 
-router.post('/iniciar', async (req, res) => {
+function receberFotoRomaneio(req, res, next) {
+  uploadRomaneio.single('romaneio')(req, res, (err) => {
+    if (err) return res.status(400).json({ erro: err.message || 'Erro ao enviar a foto do romaneio.' });
+    next();
+  });
+}
+
+router.post('/iniciar', receberFotoRomaneio, async (req, res) => {
   const parsed = iniciarSchema.safeParse(req.body);
   if (!parsed.success) {
-    const primeiraMensagem = parsed.error.errors[0]?.message || 'Dados invalidos.';
+    const primeiraMensagem = Object.values(parsed.error.flatten().fieldErrors)[0]?.[0] || 'Dados invalidos.';
     return res.status(400).json({ erro: primeiraMensagem });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ erro: 'Envie a foto do romaneio para iniciar a rota.' });
   }
 
   const rotaAberta = await prisma.rota.findFirst({
@@ -100,39 +109,18 @@ router.post('/iniciar', async (req, res) => {
     return res.status(409).json({ erro: 'Ja existe uma rota em andamento.' });
   }
 
-  let veiculo;
-
-  if (parsed.data.veiculoId) {
-    veiculo = await prisma.veiculo.findUnique({ where: { id: parsed.data.veiculoId } });
-    if (!veiculo || veiculo.status !== 'ATIVO') {
-      return res.status(404).json({ erro: 'Veiculo nao encontrado ou indisponivel.' });
-    }
-  } else {
-    if (!validarPlaca(parsed.data.placa)) {
-      return res.status(400).json({ erro: 'Placa invalida. Use o formato ABC1234 ou ABC1D23.' });
-    }
-    const placa = normalizarPlaca(parsed.data.placa);
-    veiculo = await prisma.veiculo.findUnique({ where: { placa } });
-
-    if (veiculo && veiculo.status !== 'ATIVO') {
-      return res.status(409).json({ erro: `Este veiculo esta com status "${veiculo.status}". Fale com o administrador.` });
-    }
-
-    if (!veiculo) {
-      // Veiculo ainda nao cadastrado: cria automaticamente a partir do que o motorista informou
-      veiculo = await prisma.veiculo.create({
-        data: { placa, modelo: parsed.data.modelo?.trim() || 'Nao informado', status: 'ATIVO' },
-      });
-    }
+  const veiculo = await prisma.veiculo.findUnique({ where: { id: parsed.data.veiculoId } });
+  if (!veiculo || veiculo.status !== 'ATIVO') {
+    return res.status(404).json({ erro: 'Veiculo nao encontrado ou indisponivel.' });
   }
 
   const origem = parsed.data.origem.trim();
   const destino = parsed.data.destino.trim();
 
   // Se origem/destino batem com um trajeto fixo cadastrado, usa o valor dele
-  // de acordo com o tipo do veiculo (Toco/3-4 tem precos diferentes). Se nao
-  // houver valor definido para esse tipo especifico, usa o valor padrao
-  // (rota nao fixa, com valor livre).
+  // de acordo com o tipo do veiculo (cada tipo pode ter um preco diferente).
+  // Se nao houver valor definido para esse tipo especifico, usa o valor
+  // padrao (rota nao fixa, com valor livre).
   const trajetoFixo = await prisma.trajetoFixo.findFirst({
     where: {
       status: 'ATIVO',
@@ -141,15 +129,18 @@ router.post('/iniciar', async (req, res) => {
     },
   });
 
-  const valorFixoParaTipo = trajetoFixo
-    ? veiculo.tipo === 'TOCO'
-      ? trajetoFixo.valorToco
-      : veiculo.tipo === 'TRES_QUARTOS'
-        ? trajetoFixo.valorTresQuartos
-        : null
-    : null;
+  const camposPorTipo = {
+    TOCO: 'valorToco',
+    TRES_QUARTOS: 'valorTresQuartos',
+    VAN: 'valorVan',
+    TRUCK: 'valorTruck',
+  };
+  const campoValor = camposPorTipo[veiculo.tipo];
+  const valorFixoParaTipo = trajetoFixo && campoValor ? trajetoFixo[campoValor] : null;
 
-  const valor = valorFixoParaTipo !== null ? Number(valorFixoParaTipo) : Number(process.env.VALOR_ROTA_PADRAO || 0);
+  const valor = valorFixoParaTipo !== null && valorFixoParaTipo !== undefined
+    ? Number(valorFixoParaTipo)
+    : Number(process.env.VALOR_ROTA_PADRAO || 0);
 
   const rota = await prisma.rota.create({
     data: {
@@ -159,12 +150,13 @@ router.post('/iniciar', async (req, res) => {
       destino,
       dataSaida: new Date(),
       valor,
+      fotoRomaneio: req.file.filename,
       status: 'EM_ANDAMENTO',
     },
     include: includeResumo,
   });
 
-  res.status(201).json({ motorista: req.motorista, rota, trajetoFixo: valorFixoParaTipo !== null });
+  res.status(201).json({ motorista: req.motorista, rota, trajetoFixo: valorFixoParaTipo !== null && valorFixoParaTipo !== undefined });
 });
 
 router.post('/finalizar', async (req, res) => {

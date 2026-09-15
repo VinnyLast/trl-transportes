@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, CheckCircle2, XCircle, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CheckCircle2, XCircle, Download, Image as ImageIcon } from 'lucide-react';
 import api, { mensagemErroApi } from '../api/client';
 
 const ORIGEM_PADRAO = 'FEC-BA';
@@ -31,6 +31,8 @@ const statusClasse = {
   CANCELADA: 'badge-cinza',
 };
 
+const TIPO_VEICULO_ROTULO = { TOCO: 'Toco', TRES_QUARTOS: '3/4', VAN: 'Van', TRUCK: 'Truck' };
+
 function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -54,6 +56,7 @@ export default function Rotas() {
   const [form, setForm] = useState(vazio);
   const [editandoId, setEditandoId] = useState(null);
   const [erro, setErro] = useState('');
+  const [fotoRomaneioUrl, setFotoRomaneioUrl] = useState(null);
 
   async function carregarAuxiliares() {
     // Carrega TODOS os motoristas/veiculos/clientes (nao so os ativos): uma rota
@@ -74,8 +77,15 @@ export default function Rotas() {
     if (t.status === 'fulfilled') setTrajetosFixos(t.value.data);
   }
 
+  const CAMPO_VALOR_POR_TIPO = {
+    TOCO: 'valorToco',
+    TRES_QUARTOS: 'valorTresQuartos',
+    VAN: 'valorVan',
+    TRUCK: 'valorTruck',
+  };
+
   // Acha o trajeto fixo por origem/destino e retorna o valor certo de acordo
-  // com o tipo do veiculo selecionado (Toco e 3/4 costumam ter precos diferentes)
+  // com o tipo do veiculo selecionado (cada tipo pode ter um preco diferente)
   function buscarValorTrajetoFixo(origem, destino, veiculoId) {
     if (!origem || !destino) return null;
     const trajeto = trajetosFixos.find(
@@ -84,9 +94,9 @@ export default function Rotas() {
     if (!trajeto) return null;
 
     const veiculo = veiculos.find((v) => v.id === veiculoId);
-    if (veiculo?.tipo === 'TOCO') return trajeto.valorToco ?? null;
-    if (veiculo?.tipo === 'TRES_QUARTOS') return trajeto.valorTresQuartos ?? null;
-    return trajeto.valorToco ?? trajeto.valorTresQuartos ?? null;
+    const campo = CAMPO_VALOR_POR_TIPO[veiculo?.tipo];
+    if (campo) return trajeto[campo] ?? null;
+    return trajeto.valorToco ?? trajeto.valorTresQuartos ?? trajeto.valorVan ?? trajeto.valorTruck ?? null;
   }
 
   function tentarPreencherValorFixo(dadosAtualizados) {
@@ -180,6 +190,20 @@ export default function Rotas() {
     if (!window.confirm('Excluir esta rota permanentemente?')) return;
     await api.delete(`/rotas/${id}`);
     carregar();
+  }
+
+  async function verRomaneio(id) {
+    try {
+      const res = await api.get(`/rotas/${id}/romaneio`, { responseType: 'blob' });
+      setFotoRomaneioUrl(URL.createObjectURL(res.data));
+    } catch (err) {
+      alert('Nao foi possivel carregar a foto do romaneio.');
+    }
+  }
+
+  function fecharRomaneio() {
+    if (fotoRomaneioUrl) URL.revokeObjectURL(fotoRomaneioUrl);
+    setFotoRomaneioUrl(null);
   }
 
   function exportarCsv() {
@@ -285,6 +309,11 @@ export default function Rotas() {
                             <XCircle size={16} color="#d1273d" />
                           </button>
                         )}
+                        {rota.fotoRomaneio && (
+                          <button className="btn btn-texto" title="Ver foto do romaneio" onClick={() => verRomaneio(rota.id)}>
+                            <ImageIcon size={16} color="#0b3d91" />
+                          </button>
+                        )}
                         <button className="btn btn-texto" onClick={() => abrirEdicao(rota)}><Pencil size={16} /></button>
                         <button className="btn btn-texto" onClick={() => excluir(rota.id)}><Trash2 size={16} color="#d1273d" /></button>
                       </div>
@@ -328,7 +357,7 @@ export default function Rotas() {
                   {veiculos.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.placa} - {v.modelo}
-                      {v.tipo && v.tipo !== 'OUTRO' ? ` (${v.tipo === 'TOCO' ? 'Toco' : '3/4'})` : ''}
+                      {v.tipo && v.tipo !== 'OUTRO' ? ` (${TIPO_VEICULO_ROTULO[v.tipo] || v.tipo})` : ''}
                       {v.status !== 'ATIVO' ? ` (${v.status === 'MANUTENCAO' ? 'manutencao' : 'inativo'})` : ''}
                     </option>
                   ))}
@@ -399,6 +428,18 @@ export default function Rotas() {
               <button type="submit" className="btn btn-primario">Salvar</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {fotoRomaneioUrl && (
+        <div className="modal-fundo" onClick={fecharRomaneio}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div className="modal-cabecalho">
+              <h2 style={{ margin: 0, fontSize: 18 }}>Foto do romaneio</h2>
+              <button type="button" className="btn btn-texto" onClick={fecharRomaneio}><X size={18} /></button>
+            </div>
+            <img src={fotoRomaneioUrl} alt="Romaneio" style={{ width: '100%', borderRadius: 8 }} />
+          </div>
         </div>
       )}
     </div>

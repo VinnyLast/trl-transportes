@@ -28,6 +28,8 @@ enum StatusVeiculo {
 enum TipoVeiculo {
   TOCO
   TRES_QUARTOS
+  VAN
+  TRUCK
   OUTRO
 }
 
@@ -110,6 +112,8 @@ model TrajetoFixo {
   destino          String
   valorToco        Decimal?          @db.Decimal(10, 2)
   valorTresQuartos Decimal?          @db.Decimal(10, 2)
+  valorVan         Decimal?          @db.Decimal(10, 2)
+  valorTruck       Decimal?          @db.Decimal(10, 2)
   status           StatusTrajetoFixo @default(ATIVO)
   criadoEm         DateTime          @default(now())
   atualizadoEm     DateTime          @updatedAt
@@ -131,6 +135,7 @@ model Rota {
   dataChegada    DateTime?
   valor          Decimal    @db.Decimal(10, 2)
   observacoes    String?
+  fotoRomaneio   String?
   status         StatusRota @default(AGENDADA)
   criadoEm       DateTime   @default(now())
   atualizadoEm   DateTime   @updatedAt
