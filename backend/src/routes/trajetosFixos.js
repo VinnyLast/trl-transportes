@@ -7,31 +7,34 @@ const { tratarErroExclusao } = require('../utils/erros');
 const router = express.Router();
 router.use(autenticar);
 
-// Aceita numero, string vazia ou nulo (campo opcional); string vazia/nulo vira null
+// Aceita numero, string vazia ou nulo (campo opcional); string vazia/nulo vira null.
+// A ordem importa: z.coerce.number() converte '' em 0 (Number('') === 0), entao
+// os casos "vazio"/"nulo" precisam vir ANTES na uniao, senao nunca sao alcancados.
 const valorOpcional = z
-  .union([z.coerce.number().nonnegative(), z.literal(''), z.null()])
+  .union([z.literal(''), z.null(), z.coerce.number().nonnegative()])
   .optional()
   .transform((v) => (v === '' || v === undefined || v === null ? null : v));
 
-const trajetoSchema = z
-  .object({
-    origem: z.string().min(1),
-    destino: z.string().min(1),
-    valorToco: valorOpcional,
-    valorTresQuartos: valorOpcional,
-    valorVan: valorOpcional,
-    valorTruck: valorOpcional,
-    status: z.enum(['ATIVO', 'INATIVO']).optional(),
-  })
-  .refine(
-    (dados) => {
-      const valores = [dados.valorToco, dados.valorTresQuartos, dados.valorVan, dados.valorTruck];
-      const algumInformado = valores.some((v) => v !== null && v !== undefined);
-      const nenhumEnviado = valores.every((v) => v === undefined);
-      return algumInformado || nenhumEnviado;
-    },
-    { message: 'Informe pelo menos um valor (Toco, 3/4, Van ou Truck).', path: ['valorToco'] }
-  );
+// Schema base separado do .refine(): ZodEffects (resultado de .refine) nao
+// tem metodo .partial(), entao o PUT (atualizacao parcial) precisa aplicar
+// .partial() no objeto base, sem a validacao "pelo menos um valor" (que so
+// faz sentido na criacao completa).
+const trajetoBaseSchema = z.object({
+  origem: z.string().min(1),
+  destino: z.string().min(1),
+  valorToco: valorOpcional,
+  valorTresQuartos: valorOpcional,
+  valorVan: valorOpcional,
+  valorTruck: valorOpcional,
+  status: z.enum(['ATIVO', 'INATIVO']).optional(),
+});
+
+const trajetoSchema = trajetoBaseSchema.refine(
+  (dados) => [dados.valorToco, dados.valorTresQuartos, dados.valorVan, dados.valorTruck].some((v) => v !== null),
+  { message: 'Informe pelo menos um valor (Toco, 3/4, Van ou Truck).', path: ['valorToco'] }
+);
+
+const trajetoAtualizacaoSchema = trajetoBaseSchema.partial();
 
 router.get('/', async (req, res) => {
   const { status, busca } = req.query;
@@ -72,7 +75,7 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const parsed = trajetoSchema.partial().safeParse(req.body);
+  const parsed = trajetoAtualizacaoSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ erro: 'Dados invalidos.', detalhes: parsed.error.flatten() });
 
   const dados = { ...parsed.data };
