@@ -27,6 +27,7 @@ export default function PainelMotorista() {
   const [veiculoId, setVeiculoId] = useState('');
   const [origem, setOrigem] = useState(ORIGEM_PADRAO);
   const [destino, setDestino] = useState('');
+  const [destinosFixos, setDestinosFixos] = useState([]);
   const [fotoRomaneio, setFotoRomaneio] = useState(null);
   const [previewRomaneio, setPreviewRomaneio] = useState('');
   const [carregandoStatus, setCarregandoStatus] = useState(true);
@@ -37,8 +38,12 @@ export default function PainelMotorista() {
       const res = await motoristaApi.get('/motorista-app/status');
       setRotaAtiva(res.data.rotaAtiva);
       if (!res.data.rotaAtiva) {
-        const resVeiculos = await motoristaApi.get('/motorista-app/veiculos');
+        const [resVeiculos, resDestinos] = await Promise.all([
+          motoristaApi.get('/motorista-app/veiculos'),
+          motoristaApi.get('/motorista-app/destinos-fixos'),
+        ]);
         setVeiculos(resVeiculos.data);
+        setDestinosFixos(resDestinos.data);
       }
     } catch (err) {
       if (err.response?.status === 401) {
@@ -109,6 +114,10 @@ export default function PainelMotorista() {
       setErro('Selecione o veiculo.');
       return;
     }
+    if (!destino) {
+      setErro('Selecione o destino.');
+      return;
+    }
     if (!fotoRomaneio) {
       setErro('Envie a foto do romaneio para iniciar a rota.');
       return;
@@ -144,8 +153,12 @@ export default function PainelMotorista() {
       const res = await motoristaApi.post('/motorista-app/finalizar');
       setRotaAtiva(null);
       setMensagem(`Rota finalizada as ${new Date(res.data.rota.dataChegada).toLocaleTimeString('pt-BR')}.`);
-      const resVeiculos = await motoristaApi.get('/motorista-app/veiculos');
+      const [resVeiculos, resDestinos] = await Promise.all([
+        motoristaApi.get('/motorista-app/veiculos'),
+        motoristaApi.get('/motorista-app/destinos-fixos'),
+      ]);
       setVeiculos(resVeiculos.data);
+      setDestinosFixos(resDestinos.data);
       limparFormularioRota();
     } catch (err) {
       setErro(err.response?.data?.erro || 'Nao foi possivel finalizar a rota.');
@@ -259,13 +272,23 @@ export default function PainelMotorista() {
             </div>
             <div className="campo">
               <label htmlFor="destino-motorista">Destino</label>
-              <input
+              <select
                 id="destino-motorista"
                 className="input-grande"
                 value={destino}
                 onChange={(e) => setDestino(e.target.value)}
                 required
-              />
+              >
+                <option value="">Selecione o destino...</option>
+                {destinosFixos.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              {destinosFixos.length === 0 && (
+                <span style={{ fontSize: 12, color: 'var(--vermelho)' }}>
+                  Nenhum destino cadastrado ainda. Fale com o administrador.
+                </span>
+              )}
             </div>
 
             <div className="campo">

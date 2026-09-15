@@ -78,6 +78,18 @@ router.get('/veiculos', async (req, res) => {
   res.json(veiculos);
 });
 
+// Lista os destinos ja cadastrados em Trajetos Fixos: o motorista so pode
+// escolher entre eles (nao digita destino livre), evitando erro de digitacao
+// que faria o valor automatico nao ser reconhecido.
+router.get('/destinos-fixos', async (req, res) => {
+  const trajetos = await prisma.trajetoFixo.findMany({
+    where: { status: 'ATIVO' },
+    select: { destino: true },
+    orderBy: { destino: 'asc' },
+  });
+  res.json(trajetos.map((t) => t.destino));
+});
+
 const iniciarSchema = z.object({
   veiculoId: z.string().uuid({ message: 'Selecione um veiculo cadastrado.' }),
   origem: z.string().min(1, 'Informe a origem.'),
@@ -117,10 +129,9 @@ router.post('/iniciar', receberFotoRomaneio, async (req, res) => {
   const origem = parsed.data.origem.trim();
   const destino = parsed.data.destino.trim();
 
-  // Se origem/destino batem com um trajeto fixo cadastrado, usa o valor dele
-  // de acordo com o tipo do veiculo (cada tipo pode ter um preco diferente).
-  // Se nao houver valor definido para esse tipo especifico, usa o valor
-  // padrao (rota nao fixa, com valor livre).
+  // O destino precisa ser um dos trajetos fixos cadastrados (o motorista so
+  // pode escolher entre eles no app) - valida de novo aqui no servidor para
+  // nao depender so do frontend.
   const trajetoFixo = await prisma.trajetoFixo.findFirst({
     where: {
       status: 'ATIVO',
@@ -128,6 +139,10 @@ router.post('/iniciar', receberFotoRomaneio, async (req, res) => {
       destino: { equals: destino, mode: 'insensitive' },
     },
   });
+
+  if (!trajetoFixo) {
+    return res.status(400).json({ erro: 'Destino invalido. Selecione um destino da lista.' });
+  }
 
   const camposPorTipo = {
     TOCO: 'valorToco',
