@@ -51,7 +51,7 @@ router.post('/login', limiteLogin, async (req, res) => {
   const token = jwt.sign(
     { sub: motorista.id, nome: motorista.nome, tipo: 'motorista' },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '12h' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
 
   res.json({ token, motorista: { id: motorista.id, nome: motorista.nome } });
