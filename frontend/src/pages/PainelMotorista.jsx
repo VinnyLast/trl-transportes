@@ -3,6 +3,7 @@ import { PlayCircle, StopCircle, LogOut, Truck, Camera } from 'lucide-react';
 import motoristaApi, { limparSessaoMotorista } from '../api/motoristaClient';
 import logo from '../assets/logo-trl-trim.png';
 import Rodape from '../components/Rodape';
+import { comprimirImagem } from '../utils/comprimirImagem';
 
 function formatarCpfDigitado(valor) {
   const digitos = valor.replace(/\D/g, '').slice(0, 11);
@@ -30,6 +31,7 @@ export default function PainelMotorista() {
   const [destinosFixos, setDestinosFixos] = useState([]);
   const [fotoRomaneio, setFotoRomaneio] = useState(null);
   const [previewRomaneio, setPreviewRomaneio] = useState('');
+  const [processandoFoto, setProcessandoFoto] = useState(false);
   const [carregandoStatus, setCarregandoStatus] = useState(true);
 
   async function carregarStatus() {
@@ -93,10 +95,26 @@ export default function PainelMotorista() {
     setErro('');
   }
 
-  function selecionarFoto(arquivo) {
+  async function selecionarFoto(arquivo) {
     if (previewRomaneio) URL.revokeObjectURL(previewRomaneio);
-    setFotoRomaneio(arquivo || null);
-    setPreviewRomaneio(arquivo ? URL.createObjectURL(arquivo) : '');
+
+    if (!arquivo) {
+      setFotoRomaneio(null);
+      setPreviewRomaneio('');
+      return;
+    }
+
+    setErro('');
+    setProcessandoFoto(true);
+    try {
+      const arquivoComprimido = await comprimirImagem(arquivo);
+      setFotoRomaneio(arquivoComprimido);
+      setPreviewRomaneio(URL.createObjectURL(arquivoComprimido));
+    } catch (err) {
+      setErro('Nao foi possivel processar a foto. Tente tirar outra.');
+    } finally {
+      setProcessandoFoto(false);
+    }
   }
 
   function limparFormularioRota() {
@@ -293,15 +311,20 @@ export default function PainelMotorista() {
 
             <div className="campo">
               <label htmlFor="romaneio-motorista">Foto do romaneio</label>
-              <label htmlFor="romaneio-motorista" className="btn btn-secundario btn-gigante" style={{ cursor: 'pointer' }}>
+              <label
+                htmlFor="romaneio-motorista"
+                className="btn btn-secundario btn-gigante"
+                style={{ cursor: processandoFoto ? 'wait' : 'pointer', opacity: processandoFoto ? 0.7 : 1 }}
+              >
                 <Camera size={20} />
-                {fotoRomaneio ? 'Trocar foto' : 'Tirar / escolher foto'}
+                {processandoFoto ? 'Processando foto...' : fotoRomaneio ? 'Trocar foto' : 'Tirar / escolher foto'}
               </label>
               <input
                 id="romaneio-motorista"
                 type="file"
                 accept="image/*"
                 capture="environment"
+                disabled={processandoFoto}
                 style={{ display: 'none' }}
                 onChange={(e) => selecionarFoto(e.target.files?.[0] || null)}
               />
@@ -314,7 +337,7 @@ export default function PainelMotorista() {
               )}
             </div>
 
-            <button type="submit" className="btn btn-primario btn-gigante" disabled={carregando}>
+            <button type="submit" className="btn btn-primario btn-gigante" disabled={carregando || processandoFoto}>
               <PlayCircle size={22} />
               {carregando ? 'Iniciando...' : 'Iniciar rota'}
             </button>
