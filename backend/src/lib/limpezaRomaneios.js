@@ -5,7 +5,7 @@ const { PASTA_ROMANEIOS } = require('./uploads');
 
 // Fotos de romaneio ficam guardadas por este tempo (contado a partir do
 // inicio da rota) e depois sao apagadas do disco; a rota em si continua.
-const DIAS_RETENCAO = 30;
+const DIAS_RETENCAO = 60;
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 
 async function limparRomaneiosAntigos() {

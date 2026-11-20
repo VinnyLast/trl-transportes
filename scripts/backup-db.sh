@@ -16,7 +16,7 @@
 #
 # Fotos: uma copia espelho unica em /root/backups/trl-transportes/fotos/.
 # Cada execucao so copia as fotos novas (nao duplica centenas de MB por dia).
-# Fotos com mais de 30 dias sao apagadas daqui, no mesmo prazo do sistema.
+# Fotos com mais de 60 dias sao apagadas daqui, no mesmo prazo do sistema.
 #
 # Para restaurar o banco:
 #   pg_restore -h 127.0.0.1 -U trl_user -d trl_transportes --clean --if-exists /caminho/do/arquivo.dump
@@ -43,8 +43,8 @@ if [ -d "$PASTA_UPLOADS" ]; then
   echo "[$(date)] Fotos sincronizadas em $ESPELHO_FOTOS ($(du -sh "$ESPELHO_FOTOS" | cut -f1))"
 fi
 
-# Fotos de romaneio ficam 30 dias (mesmo prazo do sistema) tambem no backup
-find "$ESPELHO_FOTOS" -type f -mtime +30 -delete
+# Fotos de romaneio ficam 60 dias (mesmo prazo do sistema) tambem no backup
+find "$ESPELHO_FOTOS" -type f -mtime +60 -delete
 
 # Remove backups de banco com mais de 14 dias
 find "$BACKUP_DIR" -maxdepth 1 -name "trl_transportes_*.dump" -mtime +14 -delete
