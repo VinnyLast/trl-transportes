@@ -17,21 +17,43 @@ import {
 } from 'recharts';
 import api from '../api/client';
 
-// Quinzena em andamento (1 = dias 1-15, 2 = dia 16 ao fim do mes), no fuso do navegador
-function quinzenaAtual() {
+const dd = (n) => String(n).padStart(2, '0');
+const paraTexto = (ano, mes, dia) => `${ano}-${dd(mes)}-${dd(dia)}`;
+const ultimoDia = (ano, mes) => new Date(ano, mes, 0).getDate();
+
+// Calcula o intervalo de datas de cada opcao do filtro (quinzena 1 = dias
+// 1-15, quinzena 2 = dia 16 ao fim do mes), no fuso do navegador.
+function calcularPeriodo(opcao) {
   const hoje = new Date();
-  const ano = hoje.getFullYear();
-  const mes = hoje.getMonth() + 1;
-  const primeira = hoje.getDate() <= 15;
-  const diaInicio = primeira ? 1 : 16;
-  const diaFim = primeira ? 15 : new Date(ano, mes, 0).getDate();
-  const mm = String(mes).padStart(2, '0');
-  const dd = (d) => String(d).padStart(2, '0');
-  return {
-    dataInicio: `${ano}-${mm}-${dd(diaInicio)}`,
-    dataFim: `${ano}-${mm}-${dd(diaFim)}`,
-    rotulo: `${dd(diaInicio)}/${mm} a ${dd(diaFim)}/${mm}`,
-  };
+  let ano = hoje.getFullYear();
+  let mes = hoje.getMonth() + 1;
+  const primeiraQuinzena = hoje.getDate() <= 15;
+
+  if (opcao === 'quinzena-atual') {
+    return primeiraQuinzena
+      ? { dataInicio: paraTexto(ano, mes, 1), dataFim: paraTexto(ano, mes, 15) }
+      : { dataInicio: paraTexto(ano, mes, 16), dataFim: paraTexto(ano, mes, ultimoDia(ano, mes)) };
+  }
+  if (opcao === 'quinzena-anterior') {
+    if (!primeiraQuinzena) return { dataInicio: paraTexto(ano, mes, 1), dataFim: paraTexto(ano, mes, 15) };
+    mes -= 1;
+    if (mes === 0) { mes = 12; ano -= 1; }
+    return { dataInicio: paraTexto(ano, mes, 16), dataFim: paraTexto(ano, mes, ultimoDia(ano, mes)) };
+  }
+  if (opcao === 'mes-anterior') {
+    mes -= 1;
+    if (mes === 0) { mes = 12; ano -= 1; }
+  }
+  if (opcao === 'mes-atual' || opcao === 'mes-anterior') {
+    return { dataInicio: paraTexto(ano, mes, 1), dataFim: paraTexto(ano, mes, ultimoDia(ano, mes)) };
+  }
+  return { dataInicio: '', dataFim: '' }; // 'tudo'
+}
+
+function formatarDataCurta(texto) {
+  if (!texto) return '';
+  const [ano, mes, dia] = texto.split('-');
+  return `${dia}/${mes}/${ano}`;
 }
 
 function formatarMoeda(valor) {
@@ -103,16 +125,31 @@ export default function Dashboard() {
   const [graficoMensal, setGraficoMensal] = useState([]);
   const [rankingMotoristas, setRankingMotoristas] = useState([]);
 
-  const quinzena = quinzenaAtual();
+  const [opcaoPeriodo, setOpcaoPeriodo] = useState('quinzena-atual');
+  const [periodo, setPeriodo] = useState(() => calcularPeriodo('quinzena-atual'));
+
+  function escolherOpcao(opcao) {
+    setOpcaoPeriodo(opcao);
+    if (opcao !== 'personalizado') setPeriodo(calcularPeriodo(opcao));
+  }
 
   useEffect(() => {
-    const periodo = { dataInicio: quinzena.dataInicio, dataFim: quinzena.dataFim };
-    api.get('/rotas/resumo', { params: periodo }).then((res) => setResumo(res.data));
     api.get('/rotas').then((res) => setRotasRecentes(res.data.slice(0, 8)));
     api.get('/rotas/grafico-mensal', { params: { meses: 6 } }).then((res) => setGraficoMensal(res.data));
-    api.get('/rotas/grafico-motoristas', { params: { limite: 6, ...periodo } }).then((res) => setRankingMotoristas(res.data));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const params = {
+      dataInicio: periodo.dataInicio || undefined,
+      dataFim: periodo.dataFim || undefined,
+    };
+    api.get('/rotas/resumo', { params }).then((res) => setResumo(res.data));
+    api.get('/rotas/grafico-motoristas', { params: { limite: 6, ...params } }).then((res) => setRankingMotoristas(res.data));
+  }, [periodo]);
+
+  const descricaoPeriodo = !periodo.dataInicio && !periodo.dataFim
+    ? 'todo o historico'
+    : `${formatarDataCurta(periodo.dataInicio) || 'inicio'} a ${formatarDataCurta(periodo.dataFim) || 'hoje'}`;
 
   const dadosStatus = resumo
     ? [
@@ -127,14 +164,29 @@ export default function Dashboard() {
     <div>
       <div className="cabecalho-pagina">
         <h1>Painel</h1>
-        <span style={{ fontSize: 13, color: 'var(--cinza-texto)' }}>
-          Quinzena atual: {quinzena.rotulo}
-        </span>
+        <span style={{ fontSize: 13, color: 'var(--cinza-texto)' }}>Periodo: {descricaoPeriodo}</span>
+      </div>
+
+      <div className="filtros">
+        <select value={opcaoPeriodo} onChange={(e) => escolherOpcao(e.target.value)}>
+          <option value="quinzena-atual">Quinzena atual</option>
+          <option value="quinzena-anterior">Quinzena anterior</option>
+          <option value="mes-atual">Mes atual</option>
+          <option value="mes-anterior">Mes anterior</option>
+          <option value="tudo">Todo o historico</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+        {opcaoPeriodo === 'personalizado' && (
+          <>
+            <input type="date" value={periodo.dataInicio} onChange={(e) => setPeriodo({ ...periodo, dataInicio: e.target.value })} />
+            <input type="date" value={periodo.dataFim} onChange={(e) => setPeriodo({ ...periodo, dataFim: e.target.value })} />
+          </>
+        )}
       </div>
 
       <div className="grade-cartoes">
         <div className="cartao-indicador">
-          <span className="rotulo"><RouteIcon size={16} /> Rotas na quinzena</span>
+          <span className="rotulo"><RouteIcon size={16} /> Rotas no periodo</span>
           <span className="valor">{resumo?.total ?? '-'}</span>
         </div>
         <div className="cartao-indicador">
@@ -142,12 +194,14 @@ export default function Dashboard() {
           <span className="valor">{resumo?.emAndamento ?? '-'}</span>
         </div>
         <div className="cartao-indicador">
-          <span className="rotulo"><Truck size={16} /> Concluidas</span>
-          <span className="valor">{resumo?.concluidas ?? '-'}</span>
+          <span className="rotulo"><Wallet size={16} /> Ja pago</span>
+          <span className="valor">{formatarMoeda(resumo?.valorPago)}</span>
         </div>
         <div className="cartao-indicador">
-          <span className="rotulo"><Wallet size={16} /> A pagar na quinzena</span>
-          <span className="valor">{formatarMoeda(resumo?.valorTotal)}</span>
+          <span className="rotulo"><Truck size={16} /> Falta pagar</span>
+          <span className="valor" style={{ color: resumo?.valorPendente > 0 ? 'var(--vermelho)' : undefined }}>
+            {formatarMoeda(resumo?.valorPendente)}
+          </span>
         </div>
       </div>
 
@@ -222,7 +276,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <h2 className="titulo-grafico">Motoristas por valor gerado (quinzena atual)</h2>
+        <h2 className="titulo-grafico">Motoristas por valor gerado no periodo</h2>
         {rankingMotoristas.length === 0 ? (
           <div className="vazio">Sem dados suficientes ainda.</div>
         ) : (

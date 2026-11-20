@@ -51,9 +51,23 @@ export default function Fechamento() {
     setAbertos((atual) => ({ ...atual, [motoristaId]: !atual[motoristaId] }));
   }
 
+  async function registrarPagamento(motorista, pago) {
+    const texto = pago
+      ? `Confirmar pagamento de ${formatarMoeda(motorista.valorPendente)} para ${motorista.nome} nesta quinzena?`
+      : `Desfazer o pagamento de ${motorista.nome} nesta quinzena? As rotas voltam a ficar pendentes.`;
+    if (!window.confirm(texto)) return;
+
+    try {
+      await api.post('/rotas/pagamento', { rotaIds: motorista.rotas.map((r) => r.id), pago });
+      await carregar();
+    } catch (err) {
+      alert(mensagemErroApi(err, 'Nao foi possivel registrar o pagamento.'));
+    }
+  }
+
   function exportarCsv() {
     if (!dados) return;
-    const linhas = [['Motorista', 'Inicio da rota', 'Termino', 'Veiculo', 'Origem', 'Destino', 'Status', 'Valor']];
+    const linhas = [['Motorista', 'Inicio da rota', 'Termino', 'Veiculo', 'Origem', 'Destino', 'Status', 'Pagamento', 'Valor']];
     for (const m of dados.motoristas) {
       for (const r of m.rotas) {
         linhas.push([
@@ -64,13 +78,14 @@ export default function Fechamento() {
           r.origem,
           r.destino,
           r.status === 'EM_ANDAMENTO' ? 'Em andamento' : r.status === 'CONCLUIDA' ? 'Concluida' : 'Agendada',
+          r.pagoEm ? `Pago em ${new Date(r.pagoEm).toLocaleDateString('pt-BR')}` : 'Pendente',
           Number(r.valor).toFixed(2).replace('.', ','),
         ]);
       }
-      linhas.push([`TOTAL ${m.nome}`, '', '', '', '', '', `${m.quantidade} rota(s)`, m.valorTotal.toFixed(2).replace('.', ',')]);
+      linhas.push([`TOTAL ${m.nome}`, '', '', '', '', '', `${m.quantidade} rota(s)`, `Pendente: ${m.valorPendente.toFixed(2).replace('.', ',')}`, m.valorTotal.toFixed(2).replace('.', ',')]);
       linhas.push([]);
     }
-    linhas.push(['TOTAL GERAL', '', '', '', '', '', `${dados.quantidade} rota(s)`, dados.valorTotal.toFixed(2).replace('.', ',')]);
+    linhas.push(['TOTAL GERAL', '', '', '', '', '', `${dados.quantidade} rota(s)`, `Pendente: ${dados.valorPendente.toFixed(2).replace('.', ',')}`, dados.valorTotal.toFixed(2).replace('.', ',')]);
 
     const csv = linhas
       .map((linha) => linha.map((campo) => `"${String(campo ?? '').replace(/"/g, '""')}"`).join(';'))
@@ -133,8 +148,14 @@ export default function Fechamento() {
             <span className="valor">{dados.quantidade}</span>
           </div>
           <div className="cartao-indicador">
-            <span className="rotulo"><Wallet size={16} /> Total a pagar</span>
-            <span className="valor">{formatarMoeda(dados.valorTotal)}</span>
+            <span className="rotulo"><Wallet size={16} /> Ja pago</span>
+            <span className="valor">{formatarMoeda(dados.valorPago)}</span>
+          </div>
+          <div className="cartao-indicador">
+            <span className="rotulo"><Wallet size={16} /> Falta pagar</span>
+            <span className="valor" style={{ color: dados.valorPendente > 0 ? 'var(--vermelho)' : undefined }}>
+              {formatarMoeda(dados.valorPendente)}
+            </span>
           </div>
         </div>
       )}
@@ -152,7 +173,9 @@ export default function Fechamento() {
                   <th></th>
                   <th>Motorista</th>
                   <th>Rotas</th>
-                  <th>Total a pagar</th>
+                  <th>Total</th>
+                  <th>Pagamento</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -172,6 +195,26 @@ export default function Fechamento() {
                       </td>
                       <td>{m.quantidade}</td>
                       <td><strong>{formatarMoeda(m.valorTotal)}</strong></td>
+                      <td>
+                        {m.pendentes === 0 ? (
+                          <span className="badge badge-verde">Pago</span>
+                        ) : m.valorPago > 0 ? (
+                          <span className="badge badge-vermelho">Falta {formatarMoeda(m.valorPendente)}</span>
+                        ) : (
+                          <span className="badge badge-vermelho">Pendente</span>
+                        )}
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {m.pendentes > 0 ? (
+                          <button className="btn btn-primario" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => registrarPagamento(m, true)}>
+                            Marcar como pago
+                          </button>
+                        ) : (
+                          <button className="btn btn-texto" style={{ fontSize: 13 }} onClick={() => registrarPagamento(m, false)}>
+                            Desfazer
+                          </button>
+                        )}
+                      </td>
                     </tr>
                     {abertos[m.motoristaId] && m.rotas.map((r) => (
                       <tr key={r.id} style={{ fontSize: 13 }}>
@@ -181,6 +224,10 @@ export default function Fechamento() {
                         </td>
                         <td style={{ color: 'var(--cinza-texto)' }}>{r.origem} &rarr; {r.destino}</td>
                         <td>{formatarMoeda(r.valor)}</td>
+                        <td style={{ color: 'var(--cinza-texto)' }}>
+                          {r.pagoEm ? `Pago em ${new Date(r.pagoEm).toLocaleDateString('pt-BR')}` : 'Pendente'}
+                        </td>
+                        <td></td>
                       </tr>
                     ))}
                   </Fragment>

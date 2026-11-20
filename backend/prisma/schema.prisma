@@ -136,6 +136,8 @@ model Rota {
   valor          Decimal    @db.Decimal(10, 2)
   observacoes    String?
   fotoRomaneio   String?
+  // Data em que o motorista foi pago por esta rota (null = ainda nao pago)
+  pagoEm         DateTime?
   status         StatusRota @default(AGENDADA)
   criadoEm       DateTime   @default(now())
   atualizadoEm   DateTime   @updatedAt

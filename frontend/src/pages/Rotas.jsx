@@ -296,7 +296,14 @@ export default function Rotas() {
                     <td>{new Date(rota.dataSaida).toLocaleString('pt-BR')}</td>
                     <td>{rota.dataChegada ? new Date(rota.dataChegada).toLocaleString('pt-BR') : '-'}</td>
                     <td>{formatarMoeda(rota.valor)}</td>
-                    <td><span className={`badge ${statusClasse[rota.status]}`}>{statusRotulo[rota.status]}</span></td>
+                    <td>
+                      <span className={`badge ${statusClasse[rota.status]}`}>{statusRotulo[rota.status]}</span>
+                      {rota.pagoEm && (
+                        <span className="badge badge-verde" style={{ marginLeft: 6 }} title={`Pago em ${new Date(rota.pagoEm).toLocaleDateString('pt-BR')}`}>
+                          Pago
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <div className="acoes-tabela">
                         {rota.status !== 'CONCLUIDA' && rota.status !== 'CANCELADA' && (

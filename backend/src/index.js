@@ -9,6 +9,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { limiteGeral } = require('./middleware/rateLimit');
+const { agendarLimpezaRomaneios } = require('./lib/limpezaRomaneios');
 
 const authRoutes = require('./routes/auth');
 const motoristasRoutes = require('./routes/motoristas');
@@ -52,4 +53,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`TRL TRANSPORTES API rodando na porta ${PORT}`);
+  agendarLimpezaRomaneios();
 });

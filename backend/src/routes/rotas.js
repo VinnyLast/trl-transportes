@@ -3,7 +3,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
-const { autenticar } = require('../middleware/auth');
+const { autenticar, somenteAdmin } = require('../middleware/auth');
 const { PASTA_ROMANEIOS } = require('../lib/uploads');
 const { filtroDataSaida, periodoQuinzena } = require('../utils/periodo');
 
@@ -57,14 +57,17 @@ router.get('/resumo', async (req, res) => {
     prisma.rota.count({ where: { ...where, status: 'CONCLUIDA' } }),
     prisma.rota.count({ where: { ...where, status: 'AGENDADA' } }),
     prisma.rota.count({ where: { ...where, status: 'CANCELADA' } }),
-    prisma.rota.findMany({ where, select: { valor: true, status: true } }),
+    prisma.rota.findMany({ where, select: { valor: true, status: true, pagoEm: true } }),
   ]);
 
-  const valorTotal = todas
-    .filter((r) => r.status !== 'CANCELADA')
-    .reduce((soma, r) => soma + Number(r.valor), 0);
+  const validas = todas.filter((r) => r.status !== 'CANCELADA');
+  const valorTotal = validas.reduce((soma, r) => soma + Number(r.valor), 0);
+  const valorPago = validas.filter((r) => r.pagoEm).reduce((soma, r) => soma + Number(r.valor), 0);
 
-  res.json({ total, emAndamento, concluidas, agendadas, canceladas, valorTotal });
+  res.json({
+    total, emAndamento, concluidas, agendadas, canceladas,
+    valorTotal, valorPago, valorPendente: valorTotal - valorPago,
+  });
 });
 
 // Serie mensal de quantidade e valor de rotas, para o grafico do painel
@@ -167,20 +170,51 @@ router.get('/fechamento', async (req, res) => {
       nome: rota.motorista?.nome || '-',
       quantidade: 0,
       valorTotal: 0,
+      valorPago: 0,
+      pendentes: 0,
       emAndamento: 0,
       rotas: [],
     };
     grupo.quantidade += 1;
     grupo.valorTotal += Number(rota.valor);
+    if (rota.pagoEm) grupo.valorPago += Number(rota.valor);
+    else grupo.pendentes += 1;
     if (rota.status === 'EM_ANDAMENTO') grupo.emAndamento += 1;
     grupo.rotas.push(rota);
     porMotorista.set(rota.motoristaId, grupo);
   }
 
   const motoristas = Array.from(porMotorista.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  for (const m of motoristas) m.valorPendente = m.valorTotal - m.valorPago;
   const valorTotal = motoristas.reduce((soma, m) => soma + m.valorTotal, 0);
+  const valorPago = motoristas.reduce((soma, m) => soma + m.valorPago, 0);
 
-  res.json({ ano, mes, quinzena, dataInicio, dataFim, quantidade: rotas.length, valorTotal, motoristas });
+  res.json({
+    ano, mes, quinzena, dataInicio, dataFim, quantidade: rotas.length,
+    valorTotal, valorPago, valorPendente: valorTotal - valorPago, motoristas,
+  });
+});
+
+// Marca (ou desmarca) rotas como pagas. Ao marcar, mantem a data original de
+// rotas que ja estavam pagas; rotas canceladas nunca sao marcadas.
+const pagamentoSchema = z.object({
+  rotaIds: z.array(z.string().uuid()).min(1).max(1000),
+  pago: z.boolean(),
+});
+
+router.post('/pagamento', somenteAdmin, async (req, res) => {
+  const parsed = pagamentoSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ erro: 'Informe as rotas e se foram pagas.' });
+
+  const { rotaIds, pago } = parsed.data;
+  const resultado = await prisma.rota.updateMany({
+    where: pago
+      ? { id: { in: rotaIds }, status: { not: 'CANCELADA' }, pagoEm: null }
+      : { id: { in: rotaIds } },
+    data: { pagoEm: pago ? new Date() : null },
+  });
+
+  res.json({ atualizadas: resultado.count });
 });
 
 router.get('/:id', async (req, res) => {
@@ -215,7 +249,9 @@ router.get('/:id/romaneio', async (req, res) => {
   if (!rota || !rota.fotoRomaneio) {
     return res.status(404).json({ erro: 'Esta rota nao tem foto de romaneio registrada.' });
   }
-  res.sendFile(path.join(PASTA_ROMANEIOS, rota.fotoRomaneio));
+  res.sendFile(path.join(PASTA_ROMANEIOS, rota.fotoRomaneio), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ erro: 'Arquivo da foto nao encontrado.' });
+  });
 });
 
 // Finaliza a rota: marca como concluida e registra a chegada no momento atual (ou informado)
