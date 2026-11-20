@@ -1,3 +1,7 @@
+// Fuso da operacao (Bahia, UTC-3, sem horario de verao): sem isso o servidor
+// usa UTC e uma rota iniciada as 22h do dia 15 seria contada no dia 16.
+process.env.TZ = 'America/Bahia';
+
 require('dotenv').config();
 const express = require('express');
 require('express-async-errors');

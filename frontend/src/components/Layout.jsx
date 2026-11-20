@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Truck, LayoutDashboard, Users, Route as RouteIcon, Building2, LogOut, MapPinned, Moon, Sun } from 'lucide-react';
+import { Truck, LayoutDashboard, Users, Route as RouteIcon, Building2, LogOut, MapPinned, Moon, Sun, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-trl-trim.png';
 import Rodape from './Rodape';
@@ -8,6 +8,7 @@ import Rodape from './Rodape';
 const itens = [
   { to: '/', label: 'Painel', icone: LayoutDashboard, fim: true },
   { to: '/rotas', label: 'Rotas', icone: RouteIcon },
+  { to: '/fechamento', label: 'Fechamento', icone: Wallet },
   { to: '/trajetos-fixos', label: 'Trajetos fixos', icone: MapPinned },
   { to: '/motoristas', label: 'Motoristas', icone: Users },
   { to: '/veiculos', label: 'Veiculos', icone: Truck },

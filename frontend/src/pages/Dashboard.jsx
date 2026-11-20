@@ -17,6 +17,23 @@ import {
 } from 'recharts';
 import api from '../api/client';
 
+// Quinzena em andamento (1 = dias 1-15, 2 = dia 16 ao fim do mes), no fuso do navegador
+function quinzenaAtual() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth() + 1;
+  const primeira = hoje.getDate() <= 15;
+  const diaInicio = primeira ? 1 : 16;
+  const diaFim = primeira ? 15 : new Date(ano, mes, 0).getDate();
+  const mm = String(mes).padStart(2, '0');
+  const dd = (d) => String(d).padStart(2, '0');
+  return {
+    dataInicio: `${ano}-${mm}-${dd(diaInicio)}`,
+    dataFim: `${ano}-${mm}-${dd(diaFim)}`,
+    rotulo: `${dd(diaInicio)}/${mm} a ${dd(diaFim)}/${mm}`,
+  };
+}
+
 function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -86,11 +103,15 @@ export default function Dashboard() {
   const [graficoMensal, setGraficoMensal] = useState([]);
   const [rankingMotoristas, setRankingMotoristas] = useState([]);
 
+  const quinzena = quinzenaAtual();
+
   useEffect(() => {
-    api.get('/rotas/resumo').then((res) => setResumo(res.data));
+    const periodo = { dataInicio: quinzena.dataInicio, dataFim: quinzena.dataFim };
+    api.get('/rotas/resumo', { params: periodo }).then((res) => setResumo(res.data));
     api.get('/rotas').then((res) => setRotasRecentes(res.data.slice(0, 8)));
     api.get('/rotas/grafico-mensal', { params: { meses: 6 } }).then((res) => setGraficoMensal(res.data));
-    api.get('/rotas/grafico-motoristas', { params: { limite: 6 } }).then((res) => setRankingMotoristas(res.data));
+    api.get('/rotas/grafico-motoristas', { params: { limite: 6, ...periodo } }).then((res) => setRankingMotoristas(res.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dadosStatus = resumo
@@ -106,11 +127,14 @@ export default function Dashboard() {
     <div>
       <div className="cabecalho-pagina">
         <h1>Painel</h1>
+        <span style={{ fontSize: 13, color: 'var(--cinza-texto)' }}>
+          Quinzena atual: {quinzena.rotulo}
+        </span>
       </div>
 
       <div className="grade-cartoes">
         <div className="cartao-indicador">
-          <span className="rotulo"><RouteIcon size={16} /> Rotas no periodo</span>
+          <span className="rotulo"><RouteIcon size={16} /> Rotas na quinzena</span>
           <span className="valor">{resumo?.total ?? '-'}</span>
         </div>
         <div className="cartao-indicador">
@@ -122,7 +146,7 @@ export default function Dashboard() {
           <span className="valor">{resumo?.concluidas ?? '-'}</span>
         </div>
         <div className="cartao-indicador">
-          <span className="rotulo"><Wallet size={16} /> Valor total a pagar</span>
+          <span className="rotulo"><Wallet size={16} /> A pagar na quinzena</span>
           <span className="valor">{formatarMoeda(resumo?.valorTotal)}</span>
         </div>
       </div>
@@ -198,7 +222,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <h2 className="titulo-grafico">Motoristas por valor gerado</h2>
+        <h2 className="titulo-grafico">Motoristas por valor gerado (quinzena atual)</h2>
         {rankingMotoristas.length === 0 ? (
           <div className="vazio">Sem dados suficientes ainda.</div>
         ) : (

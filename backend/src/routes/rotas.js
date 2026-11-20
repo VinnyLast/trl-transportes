@@ -1,9 +1,11 @@
 const express = require('express');
+const fs = require('fs/promises');
 const path = require('path');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { autenticar } = require('../middleware/auth');
 const { PASTA_ROMANEIOS } = require('../lib/uploads');
+const { filtroDataSaida, periodoQuinzena } = require('../utils/periodo');
 
 const router = express.Router();
 router.use(autenticar);
@@ -34,13 +36,8 @@ router.get('/', async (req, res) => {
     status: status || undefined,
     motoristaId: motoristaId || undefined,
     veiculoId: veiculoId || undefined,
+    dataSaida: filtroDataSaida(dataInicio, dataFim),
   };
-
-  if (dataInicio || dataFim) {
-    where.dataSaida = {};
-    if (dataInicio) where.dataSaida.gte = new Date(String(dataInicio));
-    if (dataFim) where.dataSaida.lte = new Date(String(dataFim));
-  }
 
   const rotas = await prisma.rota.findMany({
     where,
@@ -52,12 +49,7 @@ router.get('/', async (req, res) => {
 
 router.get('/resumo', async (req, res) => {
   const { dataInicio, dataFim } = req.query;
-  const where = {};
-  if (dataInicio || dataFim) {
-    where.dataSaida = {};
-    if (dataInicio) where.dataSaida.gte = new Date(String(dataInicio));
-    if (dataFim) where.dataSaida.lte = new Date(String(dataFim));
-  }
+  const where = { dataSaida: filtroDataSaida(dataInicio, dataFim) };
 
   const [total, emAndamento, concluidas, agendadas, canceladas, todas] = await Promise.all([
     prisma.rota.count({ where }),
@@ -119,12 +111,7 @@ router.get('/grafico-motoristas', async (req, res) => {
   const limite = Math.min(Number(req.query.limite) || 6, 20);
   const { dataInicio, dataFim } = req.query;
 
-  const where = { status: { not: 'CANCELADA' } };
-  if (dataInicio || dataFim) {
-    where.dataSaida = {};
-    if (dataInicio) where.dataSaida.gte = new Date(String(dataInicio));
-    if (dataFim) where.dataSaida.lte = new Date(String(dataFim));
-  }
+  const where = { status: { not: 'CANCELADA' }, dataSaida: filtroDataSaida(dataInicio, dataFim) };
 
   const rotas = await prisma.rota.findMany({
     where,
@@ -149,6 +136,51 @@ router.get('/grafico-motoristas', async (req, res) => {
     .slice(0, limite);
 
   res.json(ranking);
+});
+
+// Fechamento quinzenal para pagamento: rotas nao canceladas cuja data de
+// INICIO cai na quinzena (1 = dias 1-15, 2 = dia 16 ate o fim do mes),
+// agrupadas por motorista com total a pagar.
+const fechamentoSchema = z.object({
+  ano: z.coerce.number().int().min(2020).max(2100),
+  mes: z.coerce.number().int().min(1).max(12),
+  quinzena: z.coerce.number().int().min(1).max(2),
+});
+
+router.get('/fechamento', async (req, res) => {
+  const parsed = fechamentoSchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ erro: 'Informe ano, mes e quinzena (1 ou 2).' });
+
+  const { ano, mes, quinzena } = parsed.data;
+  const { dataInicio, dataFim } = periodoQuinzena(ano, mes, quinzena);
+
+  const rotas = await prisma.rota.findMany({
+    where: { status: { not: 'CANCELADA' }, dataSaida: filtroDataSaida(dataInicio, dataFim) },
+    include,
+    orderBy: { dataSaida: 'asc' },
+  });
+
+  const porMotorista = new Map();
+  for (const rota of rotas) {
+    const grupo = porMotorista.get(rota.motoristaId) || {
+      motoristaId: rota.motoristaId,
+      nome: rota.motorista?.nome || '-',
+      quantidade: 0,
+      valorTotal: 0,
+      emAndamento: 0,
+      rotas: [],
+    };
+    grupo.quantidade += 1;
+    grupo.valorTotal += Number(rota.valor);
+    if (rota.status === 'EM_ANDAMENTO') grupo.emAndamento += 1;
+    grupo.rotas.push(rota);
+    porMotorista.set(rota.motoristaId, grupo);
+  }
+
+  const motoristas = Array.from(porMotorista.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const valorTotal = motoristas.reduce((soma, m) => soma + m.valorTotal, 0);
+
+  res.json({ ano, mes, quinzena, dataInicio, dataFim, quantidade: rotas.length, valorTotal, motoristas });
 });
 
 router.get('/:id', async (req, res) => {
@@ -215,12 +247,18 @@ router.post('/:id/cancelar', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
+  let rota;
   try {
-    await prisma.rota.delete({ where: { id: req.params.id } });
-    res.status(204).send();
+    rota = await prisma.rota.delete({ where: { id: req.params.id } });
   } catch (err) {
-    res.status(404).json({ erro: 'Rota nao encontrada.' });
+    return res.status(404).json({ erro: 'Rota nao encontrada.' });
   }
+
+  // Remove a foto do romaneio do disco para nao acumular arquivos orfaos
+  if (rota.fotoRomaneio) {
+    await fs.unlink(path.join(PASTA_ROMANEIOS, rota.fotoRomaneio)).catch(() => {});
+  }
+  res.status(204).send();
 });
 
 module.exports = router;
