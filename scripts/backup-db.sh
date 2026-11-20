@@ -23,7 +23,7 @@
 #   pg_restore -h 127.0.0.1 -U trl_user -d trl_transportes --clean --if-exists /caminho/do/arquivo.dump
 #
 # Para restaurar as fotos de romaneio:
-#   cp -an /root/backups/trl-transportes/fotos/. /var/www/trl-transportes/backend/uploads/
+#   cp -a --update=none /root/backups/trl-transportes/fotos/. /var/www/trl-transportes/backend/uploads/
 
 set -e
 
@@ -39,8 +39,8 @@ pg_dump -h 127.0.0.1 -U trl_user -d trl_transportes -F c -f "$ARQUIVO_BANCO"
 echo "[$(date)] Backup do banco criado: $ARQUIVO_BANCO ($(du -h "$ARQUIVO_BANCO" | cut -f1))"
 
 if [ -d "$PASTA_UPLOADS" ]; then
-  # -n: nao sobrescreve o que ja existe; sem opcao de apagar, so acrescenta
-  cp -an "$PASTA_UPLOADS/." "$ESPELHO_FOTOS/"
+  # --update=none: nao sobrescreve o que ja existe; sem opcao de apagar, so acrescenta
+  cp -a --update=none "$PASTA_UPLOADS/." "$ESPELHO_FOTOS/"
   echo "[$(date)] Fotos sincronizadas em $ESPELHO_FOTOS ($(du -sh "$ESPELHO_FOTOS" | cut -f1))"
 fi
 
