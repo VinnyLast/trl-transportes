@@ -8,39 +8,44 @@
 #      (isso evita colocar a senha do banco dentro deste script)
 #   2. Copie este arquivo para /root/scripts/backup-db.sh e de permissao:
 #        chmod +x /root/scripts/backup-db.sh
-#   3. Agende no cron (todo dia as 3h da manha):
-#        crontab -e
-#      adicione a linha:
-#        0 3 * * * /root/scripts/backup-db.sh >> /root/backups/trl-transportes/backup.log 2>&1
+#   3. Agende no cron (todo dia as 3h da manha), sem apagar outras linhas:
+#        (crontab -l; echo "0 3 * * * /root/scripts/backup-db.sh >> /root/backups/trl-transportes/backup.log 2>&1") | crontab -
 #
-# Os backups ficam em /root/backups/trl-transportes/, um par de arquivos por
-# dia (banco + fotos), e backups com mais de 14 dias sao apagados
-# automaticamente.
+# Banco: um arquivo .dump por dia em /root/backups/trl-transportes/, os com
+# mais de 14 dias sao apagados (o banco e pequeno).
+#
+# Fotos: uma copia espelho unica em /root/backups/trl-transportes/fotos/.
+# Cada execucao so copia as fotos novas, e NUNCA apaga do backup uma foto que
+# sumiu do sistema - assim nao duplica centenas de MB por dia e nem perde
+# foto excluida por engano.
 #
 # Para restaurar o banco:
 #   pg_restore -h 127.0.0.1 -U trl_user -d trl_transportes --clean --if-exists /caminho/do/arquivo.dump
 #
 # Para restaurar as fotos de romaneio:
-#   tar -xzf /caminho/do/arquivo-uploads.tar.gz -C /var/www/trl-transportes/backend/
+#   cp -an /root/backups/trl-transportes/fotos/. /var/www/trl-transportes/backend/uploads/
 
 set -e
 
 BACKUP_DIR="/root/backups/trl-transportes"
 DATA=$(date +%Y-%m-%d_%H%M)
 ARQUIVO_BANCO="$BACKUP_DIR/trl_transportes_$DATA.dump"
-ARQUIVO_UPLOADS="$BACKUP_DIR/trl_transportes_uploads_$DATA.tar.gz"
 PASTA_UPLOADS="/var/www/trl-transportes/backend/uploads"
+ESPELHO_FOTOS="$BACKUP_DIR/fotos"
 
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR" "$ESPELHO_FOTOS"
 
 pg_dump -h 127.0.0.1 -U trl_user -d trl_transportes -F c -f "$ARQUIVO_BANCO"
 echo "[$(date)] Backup do banco criado: $ARQUIVO_BANCO ($(du -h "$ARQUIVO_BANCO" | cut -f1))"
 
 if [ -d "$PASTA_UPLOADS" ]; then
-  tar -czf "$ARQUIVO_UPLOADS" -C "$(dirname "$PASTA_UPLOADS")" "$(basename "$PASTA_UPLOADS")"
-  echo "[$(date)] Backup das fotos criado: $ARQUIVO_UPLOADS ($(du -h "$ARQUIVO_UPLOADS" | cut -f1))"
+  # -n: nao sobrescreve o que ja existe; sem opcao de apagar, so acrescenta
+  cp -an "$PASTA_UPLOADS/." "$ESPELHO_FOTOS/"
+  echo "[$(date)] Fotos sincronizadas em $ESPELHO_FOTOS ($(du -sh "$ESPELHO_FOTOS" | cut -f1))"
 fi
 
-# Remove backups com mais de 14 dias
-find "$BACKUP_DIR" -name "trl_transportes_*.dump" -mtime +14 -delete
-find "$BACKUP_DIR" -name "trl_transportes_uploads_*.tar.gz" -mtime +14 -delete
+# Remove backups de banco com mais de 14 dias
+find "$BACKUP_DIR" -maxdepth 1 -name "trl_transportes_*.dump" -mtime +14 -delete
+
+# Remove os pacotes antigos de fotos (formato anterior, substituido pelo espelho)
+find "$BACKUP_DIR" -maxdepth 1 -name "trl_transportes_uploads_*.tar.gz" -mtime +2 -delete
