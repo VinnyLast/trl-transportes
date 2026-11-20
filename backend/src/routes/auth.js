@@ -12,7 +12,8 @@ const router = express.Router();
 // Login aceita e-mail OU CPF como identificador, junto com a senha
 const loginSchema = z
   .object({
-    email: z.string().email().optional(),
+    // Ignora maiusculas e espacos sobrando (autocompletar do navegador/celular)
+    email: z.string().trim().toLowerCase().email().optional(),
     cpf: z.string().optional(),
     senha: z.string().min(1),
   })
@@ -60,7 +61,7 @@ router.get('/me', autenticar, async (req, res) => {
 
 const criarUsuarioSchema = z.object({
   nome: z.string().min(2),
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   cpf: z.string().refine((v) => !v || validarCPF(v), { message: 'CPF invalido.' }).optional(),
   senha: z.string().min(6),
   papel: z.enum(['ADMINISTRADOR', 'OPERADOR']).default('OPERADOR'),

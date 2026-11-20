@@ -134,7 +134,7 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    api.get('/rotas').then((res) => setRotasRecentes(res.data.slice(0, 8)));
+    api.get('/rotas', { params: { limite: 8 } }).then((res) => setRotasRecentes(res.data));
     api.get('/rotas/grafico-mensal', { params: { meses: 6 } }).then((res) => setGraficoMensal(res.data));
   }, []);
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs/promises');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
@@ -97,6 +98,15 @@ const iniciarSchema = z.object({
 });
 
 function receberFotoRomaneio(req, res, next) {
+  // A foto e gravada em disco antes das validacoes; se a rota acabar nao
+  // sendo criada (qualquer resposta de erro), apaga a foto para nao sobrar
+  // arquivo orfao.
+  res.on('finish', () => {
+    if (res.statusCode >= 400 && req.file?.path) {
+      fs.unlink(req.file.path).catch(() => {});
+    }
+  });
+
   uploadRomaneio.single('romaneio')(req, res, (err) => {
     if (err) return res.status(400).json({ erro: err.message || 'Erro ao enviar a foto do romaneio.' });
     next();

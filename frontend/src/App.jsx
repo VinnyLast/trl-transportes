@@ -1,9 +1,13 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import PainelMotorista from './pages/PainelMotorista';
-import Dashboard from './pages/Dashboard';
+
+// O painel usa a biblioteca de graficos (pesada); carregando sob demanda, o
+// app do motorista no celular nao precisa baixa-la.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 import Motoristas from './pages/Motoristas';
 import Veiculos from './pages/Veiculos';
 import Clientes from './pages/Clientes';
@@ -15,7 +19,11 @@ function RotaPrivada({ children, redirecionarPara = '/login' }) {
   const { usuario, carregando } = useAuth();
   if (carregando) return null;
   if (!usuario) return <Navigate to={redirecionarPara} replace />;
-  return <Layout>{children}</Layout>;
+  return (
+    <Layout>
+      <Suspense fallback={<div className="vazio">Carregando...</div>}>{children}</Suspense>
+    </Layout>
+  );
 }
 
 export default function App() {

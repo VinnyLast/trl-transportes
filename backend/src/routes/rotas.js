@@ -31,6 +31,7 @@ const include = {
 
 router.get('/', async (req, res) => {
   const { status, motoristaId, veiculoId, dataInicio, dataFim } = req.query;
+  const limite = Number(req.query.limite);
 
   const where = {
     status: status || undefined,
@@ -43,6 +44,7 @@ router.get('/', async (req, res) => {
     where,
     include,
     orderBy: { dataSaida: 'desc' },
+    take: Number.isInteger(limite) && limite > 0 ? Math.min(limite, 500) : undefined,
   });
   res.json(rotas);
 });

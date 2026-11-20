@@ -51,7 +51,12 @@ export default function Rotas() {
   const [veiculos, setVeiculos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [trajetosFixos, setTrajetosFixos] = useState([]);
-  const [filtros, setFiltros] = useState({ status: '', motoristaId: '', veiculoId: '', dataInicio: '', dataFim: '' });
+  // Abre no mes atual para nao carregar todo o historico de uma vez
+  const [filtros, setFiltros] = useState(() => {
+    const hoje = new Date();
+    const inicioMes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
+    return { status: '', motoristaId: '', veiculoId: '', dataInicio: inicioMes, dataFim: '' };
+  });
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(vazio);
   const [editandoId, setEditandoId] = useState(null);
